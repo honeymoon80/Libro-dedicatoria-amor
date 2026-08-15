@@ -1,124 +1,133 @@
 /* ============================================================
-   SCRIPT.JS — Libro Virtual Interactivo para May
-   Arquitectura: módulos IIFE, sin frameworks externos.
-   Emil design-eng: sin "all" en transitions, ease-out preferido,
-   feedback en pointerdown, animaciones interruptibles.
+   SCRIPT.JS — Libro Virtual Interactivo v2
+   Skills activas:
+   • Emil design-eng: feedback en pointerdown, sin 'all',
+     propiedades exactas, ease-out
+   • Apple design: swipe 1:1 con inercia y rubber-banding,
+     interrupción de animaciones en vuelo
+   • motion-system: Tier-1 feedback (≤300ms), Tier-2 transición,
+     Tier-3 apertura cinematográfica
+   • cinematic-ui: sombra y brillo dinámicos de curvatura
    ============================================================ */
 'use strict';
 
 // ════════════════════════════════════════════
-// ESTADO GLOBAL
+// ESTADO
 // ════════════════════════════════════════════
-const STATE = {
+const S = {
   // Fase 1
-  codigoIntroducido: '',
-  clicsRealizados: 0,
-  fase: 'code',       // 'code' | 'card' | 'book'
+  digits:    '',          // dígitos ingresados
+  clics:     0,           // clics en la carta
+  fase:      'code',      // 'code' | 'carta' | 'book'
 
   // Libro
-  bookOpen: false,
-  bookShowingBack: false, // true = mostrando contraportada
-  vistaActual: 0,         // índice de vista actual (0 = portada cerrada / cubierta)
-  flipping: false,        // animación de volteo en curso (evita doble-clic)
+  bookOpen:  false,
+  showBack:  false,       // true = contraportada visible
+  vista:     0,           // índice de vista actual
+  flipping:  false,       // volteo en curso (bloquea swipe)
+  flipDir:   0,           // 1=forward, -1=back
+
+  // Swipe — Apple design: tracking 1:1 + inercia
+  swipeStartX:   null,
+  swipeStartY:   null,
+  swipeStartTime:null,
+  swipeDelta:    0,
+  swipePeaking:  false,   // ya superó el umbral visual
 
   // Reproductor
-  songIdx: 0,
-  playing: false,
-  playerOpen: false,
-
-  // Swipe/drag
-  dragStartX: null,
-  dragging: false,
+  songIdx:   0,
+  playing:   false,
+  playerOpen:false,
 };
 
-// Vista = par de páginas que se muestran a la vez.
-// Se calculan dinámicamente desde CONFIG.paginas.
-// Las vistas se construyen en buildVistas().
-let VISTAS = [];  // Array de { left: PageDescriptor, right: PageDescriptor }
-// PageDescriptor: { type: 'portada_interior'|'pagina'|'contraportada_interior'|'contraportada', idx?, frase? }
+// Vistas construidas dinámicamente
+let VISTAS = [];
 
 // ════════════════════════════════════════════
-// DOM REFS
+// DOM
 // ════════════════════════════════════════════
 const $ = id => document.getElementById(id);
-let dom = {};
+let D = {};   // cache de referencias DOM
 
 function cacheDom() {
-  dom = {
+  D = {
     // Globales
-    toast:           $('toast'),
-    confettiCont:    $('confettiCont'),
-    heartsLayer:     $('heartsLayer'),
-    glowCanvas:      $('glowCanvas'),
+    toast:       $('toast'),
+    confettiCont:$('confettiCont'),
+    heartsLayer: $('heartsLayer'),
+    glowCanvas:  $('glowCanvas'),
+    fxCanvas:    $('fxCanvas'),
     // Entrada
-    entryScreen:     $('entryScreen'),
-    stepCode:        $('stepCode'),
-    stepCard:        $('stepCard'),
-    entryTitle:      $('entryTitle'),
-    entrySubtitle:   $('entrySubtitle'),
-    codeDots:        Array.from(document.querySelectorAll('.code-dot')),
-    codeFeedback:    $('codeFeedback'),
-    numpad:          $('numpad'),
-    confirmCodeBtn:  $('confirmCodeBtn'),
-    clearBtn:        $('clearBtn'),
+    entryScreen: $('entryScreen'),
+    stepCode:    $('stepCode'),
+    stepCarta:   $('stepCarta'),
+    entryTitle:  $('entryTitle'),
+    entrySub:    $('entrySub'),
+    codePips:    Array.from(document.querySelectorAll('.code-pip')),
+    codeMsg:     $('codeMsg'),
+    numpad:      $('numpad'),
+    delBtn:      $('delBtn'),
+    okBtn:       $('okBtn'),
     // Carta
-    cartaCard:       $('cartaCard'),
-    cartaTitulo:     $('cartaTitulo'),
-    cartaSubtitulo:  $('cartaSubtitulo'),
-    cartaRingFg:     $('cartaRingFg'),
-    cartaClickCount: $('cartaClickCount'),
-    cartaClickTotal: $('cartaClickTotal'),
-    cartaHitoMsg:    $('cartaHitoMsg'),
-    cartaClosedContent: $('cartaClosedContent'),
-    cartaOpenContent:   $('cartaOpenContent'),
-    cartaOpenMensaje:   $('cartaOpenMensaje'),
-    cartaBtnSi:      $('cartaBtnSi'),
-    cartaBtnNo:      $('cartaBtnNo'),
+    cartaWrap:    $('cartaWrap'),
+    cartaEnvelope:$('cartaEnvelope'),
+    cartaFlap:    document.querySelector('.carta-flap'),
+    cartaTitle:   $('cartaTitle'),
+    cartaSub:     $('cartaSub'),
+    ringFg:       $('ringFg'),
+    ringCount:    $('ringCount'),
+    ringTotal:    $('ringTotal'),
+    cartaHito:    $('cartaHito'),
+    cartaClosed:  $('cartaClosed'),
+    cartaAbierta: $('cartaAbierta'),
+    cartaOpenMsg: $('cartaOpenMsg'),
+    btnSi:        $('btnSi'),
+    btnNo:        $('btnNo'),
     // Libro
-    bookScreen:      $('bookScreen'),
-    bookStage:       $('bookStage'),
-    book:            $('book'),
-    bookSpine:       $('bookSpine'),
-    bookShadow:      $('bookShadow'),
-    pageLeft:        $('pageLeft'),
-    pageLeftContent: $('pageLeftContent'),
-    pageLeftBack:    $('pageLeftBack'),
-    pageRight:       $('pageRight'),
-    pageRightInner:  $('pageRightInner'),
-    pageRightContent:$('pageRightContent'),
-    pageRightBack:   $('pageRightBack'),
-    coverFront:      $('coverFront'),
-    coverFrontImg:   $('coverFrontImg'),
-    coverBack:       $('coverBack'),
-    coverBackImg:    $('coverBackImg'),
-    coverTitle:      $('coverTitle'),
-    coverSubtitle:   $('coverSubtitle'),
-    coverOpenHint:   $('coverOpenHint'),
-    coverBackText:   $('coverBackText'),
-    coverBackSub:    $('coverBackSub'),
-    // Nav
-    btnPrev:         $('btnPrev'),
-    btnNext:         $('btnNext'),
-    navLabel:        $('navLabel'),
-    navProgressFill: $('navProgressFill'),
-    btnClose:        $('btnClose'),
-    btnRestore:      $('btnRestore'),
+    bookScreen:  $('bookScreen'),
+    bookStage:   $('bookStage'),
+    book:        $('book'),
+    spine:       $('spine'),
+    groundShadow:$('groundShadow'),
+    pageL:       $('pageL'),
+    pageLFront:  $('pageLFront'),
+    pageLBack:   $('pageLBack'),
+    pageR:       $('pageR'),
+    pageRInner:  $('pageRInner'),
+    pageRFront:  $('pageRFront'),
+    pageRBack:   $('pageRBack'),
+    flipShadow:  $('flipShadow'),
+    flipShine:   $('flipShine'),
+    coverFront:  $('coverFront'),
+    coverFrontImg:$('coverFrontImg'),
+    coverTitle:  $('coverTitle'),
+    coverSubtitle:$('coverSubtitle'),
+    coverHint:   $('coverHint'),
+    coverBack:   $('coverBack'),
+    coverBackImg:$('coverBackImg'),
+    coverBackText:$('coverBackText'),
+    coverBackSub: $('coverBackSub'),
+    btnPrev:     $('btnPrev'),
+    btnNext:     $('btnNext'),
+    navFill:     $('navFill'),
+    navLabel:    $('navLabel'),
+    btnClose:    $('btnClose'),
+    btnRestore:  $('btnRestore'),
     // Reproductor
-    playerWrap:      $('playerWrap'),
-    playerToggle:    $('playerToggle'),
-    playerPanel:     $('playerPanel'),
-    playerDisc:      $('playerDisc'),
-    playerName:      $('playerName'),
-    playerCur:       $('playerCur'),
-    playerTot:       $('playerTot'),
-    playerFill:      $('playerFill'),
-    playerThumb:     $('playerThumb'),
-    playerTrack:     $('playerTrack'),
-    playerPlay:      $('playerPlay'),
-    playerPrev:      $('playerPrev'),
-    playerNext:      $('playerNext'),
-    playerVol:       $('playerVol'),
-    bookAudio:       $('bookAudio'),
+    playerToggle:$('playerToggle'),
+    playerBody:  $('playerBody'),
+    playerDisc:  $('playerDisc'),
+    playerName:  $('playerName'),
+    playerCur:   $('playerCur'),
+    playerTot:   $('playerTot'),
+    playerFill:  $('playerFill'),
+    playerKnob:  $('playerKnob'),
+    playerTrack: $('playerTrack'),
+    pcPlay:      $('pcPlay'),
+    pcPrev:      $('pcPrev'),
+    pcNext:      $('pcNext'),
+    playerVol:   $('playerVol'),
+    audio:       $('audio'),
   };
 }
 
@@ -129,63 +138,67 @@ document.addEventListener('DOMContentLoaded', () => {
   cacheDom();
   applyConfig();
   buildVistas();
-  initEntryScreen();
+
+  // Aplicar tiempos desde CONFIG a CSS custom properties
+  const root = document.documentElement;
+  root.style.setProperty('--t-flip',  CONFIG.duracionVolteo  + 'ms');
+  root.style.setProperty('--t-open',  CONFIG.duracionApertura + 'ms');
+  root.style.setProperty('--t-close', CONFIG.duracionCierre  + 'ms');
+
+  initEntryCode();
   initGlowCanvas();
-  startFloatingHearts();
+  initFxCanvas();
+  startHearts();
   initPlayer();
-  // Aplicar duración de volteo desde CONFIG
-  document.documentElement.style.setProperty('--flip-duration', CONFIG.duracion_volteo + 'ms');
-  document.documentElement.style.setProperty('--book-open-dur', CONFIG.duracion_apertura + 'ms');
-  document.documentElement.style.setProperty('--book-close-dur', CONFIG.duracion_cierre + 'ms');
 });
 
 // ════════════════════════════════════════════
-// APLICAR CONFIG A TEXTOS DEL HTML
+// APLICAR CONFIG A TEXTOS
 // ════════════════════════════════════════════
 function applyConfig() {
-  dom.entryTitle.textContent     = CONFIG.texto_entrada_titulo;
-  dom.entrySubtitle.textContent  = CONFIG.texto_entrada_subtitulo;
-  dom.cartaTitulo.textContent    = CONFIG.titulo_carta;
-  dom.cartaSubtitulo.textContent = CONFIG.subtitulo_carta;
-  dom.cartaClickTotal.textContent= `/ ${CONFIG.clics_necesarios}`;
-  dom.cartaOpenMensaje.textContent = CONFIG.mensaje_dentro_carta;
-  dom.cartaBtnSi.textContent     = CONFIG.texto_btn_si;
-  dom.cartaBtnNo.textContent     = CONFIG.texto_btn_no;
-  dom.coverTitle.textContent     = CONFIG.titulo_libro;
-  dom.coverSubtitle.textContent  = CONFIG.subtitulo_libro;
-  dom.coverOpenHint.textContent  = CONFIG.texto_instruccion_portada;
-  dom.coverBackText.textContent  = CONFIG.contraportada_texto;
-  dom.coverBackSub.textContent   = CONFIG.contraportada_subtexto;
-  document.title = `${CONFIG.titulo_libro} 💗`;
+  D.entryTitle.textContent     = CONFIG.texto_entrada_titulo  || `Un regalo para ${CONFIG.nombrePareja}`;
+  D.entrySub.textContent       = CONFIG.texto_entrada_subtitulo || 'Ingresa tu código para abrirlo 💗';
+  D.cartaTitle.textContent     = CONFIG.tituloCarta;
+  D.cartaSub.textContent       = CONFIG.subtituloCarta;
+  D.ringTotal.textContent      = '/ ' + CONFIG.clicsNecesarios;
+  D.cartaOpenMsg.textContent   = CONFIG.mensajeDentroCarta;
+  D.btnSi.textContent          = CONFIG.texto_btn_si   || '💗 Sí, quiero abrirla';
+  D.btnNo.textContent          = CONFIG.texto_btn_no   || 'Espera un momento...';
+  D.coverTitle.textContent     = CONFIG.tituloLibro;
+  D.coverSubtitle.textContent  = CONFIG.subtituloLibro;
+  D.coverHint.textContent      = CONFIG.texto_instruccion_portada || 'Toca la portada para abrir el libro 💗';
+  D.coverBackText.textContent  = CONFIG.tapas.contraportada.texto;
+  D.coverBackSub.textContent   = CONFIG.tapas.contraportada.subtexto;
+  document.title               = CONFIG.tituloLibro + ' 💗';
 }
 
 // ════════════════════════════════════════════
-// CONSTRUIR VISTAS (pares de páginas)
+// CONSTRUIR VISTAS (lógica par/impar)
 // ════════════════════════════════════════════
+// Descriptor: { type: 'portada_interior'|'pagina'|'contraportada_interior'|'contraportada_exterior', idx? }
 function buildVistas() {
-  const pags = CONFIG.paginas;
-  const n    = pags.length;
+  const n    = CONFIG.paginas.length;
   const esPar = n % 2 === 0;
   VISTAS = [];
 
-  // Vista 1 siempre: portada interior (izq) + página 0 (der)
+  // Vista 1 siempre: portada interior (izq) + página[0] (der)
   VISTAS.push({ left:{ type:'portada_interior' }, right:{ type:'pagina', idx:0 } });
 
   if (esPar) {
-    // PAR: páginas 1..n-2 van de dos en dos, luego última vista con contraportada exterior
+    // PAR: páginas 1..n-2 de dos en dos, última vista = pág[n-1] + contraportada exterior
     for (let j = 1; j <= n - 2; j += 2) {
       VISTAS.push({ left:{ type:'pagina',idx:j }, right:{ type:'pagina',idx:j+1 } });
     }
-    // Última vista: página[n-1] izq + contraportada exterior der
     VISTAS.push({ left:{ type:'pagina',idx:n-1 }, right:{ type:'contraportada_exterior' } });
   } else {
-    // IMPAR: páginas 1..n-2 de dos en dos
+    // IMPAR: páginas 1..n-2 de dos en dos, pág[n-2]+pág[n-1], luego pág[n-1]+contraportada interior
     for (let j = 1; j <= n - 2; j += 2) {
       VISTAS.push({ left:{ type:'pagina',idx:j }, right:{ type:'pagina',idx:j+1 } });
     }
-    // Penúltima vista: página[n-2] izq + página[n-1] der  (el par final)
-    // NOTA: ya fue incluida en el loop si n-1 es par. Si n=9: j llega a j=7 → pag7+pag8 ✓
-    // Última vista: página[n-1] izq + contraportada interior der (spec: solo en impar)
+    // Si n-2 no alcanzó a emparejarse con n-1 dentro del loop, lo añadimos aquí
+    // Con n impar: el loop j=1..n-2 itera j=1,3,...,n-2 (n-2 es impar).
+    // j=n-2 → empareja pág[n-2]+pág[n-1] → ✓ ya incluido.
+    // Última vista extra: pág[n-1] + contraportada interior
     VISTAS.push({ left:{ type:'pagina',idx:n-1 }, right:{ type:'contraportada_interior' } });
   }
 }
@@ -193,678 +206,881 @@ function buildVistas() {
 // ════════════════════════════════════════════
 // FASE 1A — CÓDIGO DE ACCESO
 // ════════════════════════════════════════════
-function initEntryScreen() {
-  // Numpad: responder en pointerdown (Apple design: kill latency)
-  dom.numpad.querySelectorAll('.num-btn[data-digit]').forEach(btn => {
-    btn.addEventListener('pointerdown', e => { e.preventDefault(); addDigit(btn.dataset.digit); });
+function initEntryCode() {
+  // Apple: pointerdown para respuesta inmediata (kill tap delay)
+  D.numpad.querySelectorAll('.nk[data-d]').forEach(btn => {
+    btn.addEventListener('pointerdown', e => { e.preventDefault(); addDigit(btn.dataset.d); });
   });
-  dom.clearBtn.addEventListener('pointerdown', e => { e.preventDefault(); removeDigit(); });
-  dom.confirmCodeBtn.addEventListener('pointerdown', e => { e.preventDefault(); checkCode(); });
+  D.delBtn.addEventListener('pointerdown', e => { e.preventDefault(); delDigit(); });
+  D.okBtn.addEventListener('pointerdown',  e => { e.preventDefault(); checkCode(); });
 
-  // Teclado físico
+  // Soporte teclado físico
   document.addEventListener('keydown', e => {
-    if (STATE.fase !== 'code') return;
+    if (S.fase !== 'code') return;
     if (e.key >= '0' && e.key <= '9') addDigit(e.key);
-    else if (e.key === 'Backspace') removeDigit();
-    else if (e.key === 'Enter') checkCode();
+    else if (e.key === 'Backspace')    delDigit();
+    else if (e.key === 'Enter')        checkCode();
   });
 }
 
 function addDigit(d) {
-  if (STATE.codigoIntroducido.length >= 6) return;
-  STATE.codigoIntroducido += d;
-  renderCodeDots();
-  if (STATE.codigoIntroducido.length === 6) checkCode();
+  if (S.digits.length >= 6) return;
+  S.digits += d;
+  renderPips();
+  if (S.digits.length === 6) checkCode();
 }
-function removeDigit() {
-  STATE.codigoIntroducido = STATE.codigoIntroducido.slice(0, -1);
-  renderCodeDots();
+function delDigit() {
+  S.digits = S.digits.slice(0, -1);
+  renderPips();
 }
-function renderCodeDots() {
-  dom.codeDots.forEach((dot, i) => {
-    dot.classList.toggle('filled', i < STATE.codigoIntroducido.length);
+function renderPips() {
+  D.codePips.forEach((pip, i) => {
+    pip.classList.toggle('on', i < S.digits.length);
   });
 }
 function checkCode() {
-  if (STATE.codigoIntroducido.length < 6) return;
-  if (STATE.codigoIntroducido === String(CONFIG.codigo_acceso)) {
-    dom.codeFeedback.style.color = '#4caf50';
-    dom.codeFeedback.textContent = CONFIG.mensaje_codigo_correcto;
-    setTimeout(() => {
-      STATE.fase = 'card';
-      dom.stepCode.classList.add('hidden');
-      dom.stepCard.classList.remove('hidden');
-      initCartaStep();
-    }, 900);
+  if (S.digits.length < 6) return;
+  if (S.digits === String(CONFIG.codigoAcceso)) {
+    D.codeMsg.style.color = '#4caf50';
+    D.codeMsg.textContent = CONFIG.msgCodigoCorrecto;
+    setTimeout(() => goToCarta(), 900);
   } else {
-    // Error: vibración + shake
-    dom.codeDots.forEach(d => d.classList.add('error'));
-    dom.codeFeedback.style.color = '';
-    dom.codeFeedback.textContent = CONFIG.mensaje_codigo_incorrecto;
+    D.codePips.forEach(p => p.classList.add('err'));
+    D.codeMsg.style.color = '';
+    D.codeMsg.textContent = CONFIG.msgCodigoIncorrecto;
     if (navigator.vibrate) navigator.vibrate([60, 30, 60]);
     setTimeout(() => {
-      dom.codeDots.forEach(d => d.classList.remove('error'));
-      STATE.codigoIntroducido = '';
-      renderCodeDots();
+      D.codePips.forEach(p => p.classList.remove('err'));
+      S.digits = '';
+      renderPips();
+      D.codeMsg.textContent = '';
     }, 700);
   }
 }
-
-// ════════════════════════════════════════════
-// FASE 1B — RITUAL DE CLICS (la carta)
-// ════════════════════════════════════════════
-function initCartaStep() {
-  // Apple: responde en pointerdown, no en click
-  dom.cartaCard.addEventListener('pointerdown', handleCartaClick);
-  dom.cartaBtnSi.addEventListener('click', handleBtnSi);
-  dom.cartaBtnNo.addEventListener('click', handleBtnNo);
+function goToCarta() {
+  S.fase = 'carta';
+  D.stepCode.classList.add('hidden');
+  D.stepCarta.classList.remove('hidden');
+  initCartaEvents();
 }
 
-function handleCartaClick(e) {
-  // Si ya se completaron los clics y se muestra la carta abierta: no hacer nada
-  if (!dom.cartaClosedContent.classList.contains('hidden')) {
-    incrementarClic();
-  }
+// ════════════════════════════════════════════
+// FASE 1B — RITUAL DE CLICS (carta)
+// ════════════════════════════════════════════
+function initCartaEvents() {
+  // Apple: pointerdown → feedback inmediato
+  D.cartaEnvelope.addEventListener('pointerdown', handleCartaClick);
+  D.btnSi.addEventListener('click', handleBtnSi);
+  D.btnNo.addEventListener('click', handleBtnNo);
+}
+
+function handleCartaClick() {
+  if (!D.cartaClosed.classList.contains('hidden')) incrementarClic();
 }
 
 function incrementarClic() {
-  if (STATE.clicsRealizados >= CONFIG.clics_necesarios) return;
-  STATE.clicsRealizados++;
+  if (S.clics >= CONFIG.clicsNecesarios) return;
+  S.clics++;
 
-  // Feedback visual Tier-1: pulso en la carta
-  dom.cartaCard.classList.remove('pulsing');
-  void dom.cartaCard.offsetWidth; // reflow para re-triggear la animación
-  dom.cartaCard.classList.add('pulsing');
-  setTimeout(() => dom.cartaCard.classList.remove('pulsing'), 350);
+  // Tier-1 feedback: pulso inmediato ≤300ms (Emil)
+  D.cartaEnvelope.classList.remove('pulsing');
+  void D.cartaEnvelope.offsetWidth; // reflow para re-triggerear
+  D.cartaEnvelope.classList.add('pulsing');
+  setTimeout(() => D.cartaEnvelope.classList.remove('pulsing'), 360);
 
-  // Actualizar contador
-  dom.cartaClickCount.textContent = STATE.clicsRealizados;
+  // Actualizar contador visual
+  D.ringCount.textContent = S.clics;
 
-  // Actualizar anillo SVG (circumferencia = 2π × 54 ≈ 339.3)
-  const circ = 339.3;
-  const offset = circ - (STATE.clicsRealizados / CONFIG.clics_necesarios) * circ;
-  dom.cartaRingFg.style.strokeDashoffset = offset;
+  // Anillo SVG: circumferencia ≈ 2π×52 = 326.7
+  const circ = 326.7;
+  const offset = circ - (S.clics / CONFIG.clicsNecesarios) * circ;
+  D.ringFg.style.strokeDashoffset = offset;
 
-  // Hitos
-  const hito = CONFIG.hitos.find(h => h.clic === STATE.clicsRealizados);
+  // Hito
+  const hito = CONFIG.hitos.find(h => h.clic === S.clics);
   if (hito) {
-    dom.cartaHitoMsg.textContent = hito.mensaje;
-    dom.cartaHitoMsg.style.animation = 'none';
-    void dom.cartaHitoMsg.offsetWidth;
-    dom.cartaHitoMsg.style.animation = '';
+    D.cartaHito.textContent = hito.mensaje;
+    D.cartaHito.style.animation = 'none';
+    void D.cartaHito.offsetWidth;
+    D.cartaHito.style.animation = '';
   }
 
-  // Partículas pequeñas cada 5 clics para feedback extra
-  if (STATE.clicsRealizados % 5 === 0) spawnParticles(window.innerWidth / 2, window.innerHeight / 2, 6);
-
-  // Al completar
-  if (STATE.clicsRealizados >= CONFIG.clics_necesarios) {
-    cartaCompleta();
+  // Partículas cada 5 clics
+  if (S.clics % 5 === 0) {
+    const r = D.cartaEnvelope.getBoundingClientRect();
+    spawnFx(r.left + r.width/2, r.top + r.height/2, 7);
   }
+
+  if (S.clics >= CONFIG.clicsNecesarios) abrirCarta();
 }
 
-function cartaCompleta() {
-  launchConfetti(80);
-  spawnParticles(window.innerWidth / 2, window.innerHeight / 2, 20);
-  // Mostrar contenido de carta abierta
-  dom.cartaClosedContent.classList.add('hidden');
-  dom.cartaOpenContent.classList.remove('hidden');
+function abrirCarta() {
+  // Abrir el flap del envelope
+  D.cartaFlap.classList.add('open');
+  launchConfetti(70);
+  spawnFx(window.innerWidth/2, window.innerHeight/2, 18);
+
+  setTimeout(() => {
+    D.cartaClosed.classList.add('hidden');
+    D.cartaAbierta.classList.remove('hidden');
+  }, 650);
 }
 
 function handleBtnSi() {
-  // Transición al libro con Tier-2
-  dom.entryScreen.classList.add('closing');
+  D.entryScreen.classList.add('closing');
   setTimeout(() => {
-    dom.entryScreen.style.display = 'none';
+    D.entryScreen.style.display = 'none';
     showBookScreen();
   }, 600);
 }
-
 function handleBtnNo() {
-  showToast(CONFIG.mensaje_no_click);
+  showToast(CONFIG.mensaje_no_click || 'Cuando estés lista, aquí estaré esperándote 🌸');
 }
 
 // ════════════════════════════════════════════
-// PANTALLA DEL LIBRO
+// FASE 2 — LIBRO VIRTUAL
 // ════════════════════════════════════════════
 function showBookScreen() {
-  STATE.fase = 'book';
-  dom.bookScreen.classList.remove('hidden');
-  // Mostrar portada cerrada con botón de abrir
-  renderCoverClosed('front');
+  S.fase = 'book';
+  D.bookScreen.classList.remove('hidden');
+  // Mostrar portada cerrada
+  setBookState('closed-front');
   updateNav();
-  // Iniciar música con interacción del usuario
-  initMusicOnInteract();
+  initBookEvents();
+  startMusicOnInteract();
 }
 
-// ════════════════════════════════════════════
-// ESTADO DEL LIBRO: CERRADO / ABIERTO
-// ════════════════════════════════════════════
-function renderCoverClosed(side) {
-  STATE.bookOpen = false;
-  STATE.bookShowingBack = side === 'back';
-  dom.book.className = 'book closed' + (side === 'back' ? ' closed-back' : '');
-  dom.bookShadow.style.opacity = '0.6';
-  // Portada siempre cargada desde assets
-  dom.coverFrontImg.src = 'assets/portada.webp';
-  dom.coverBackImg.src  = 'assets/contraportada.webp';
-  // Portada es clickeable para abrir
-  dom.coverFront.style.cursor = 'pointer';
-  dom.coverFront.onclick = () => { if (!STATE.bookOpen) abrirLibro(); };
-  updateNav();
+// ── Estado del libro ─────────────────────────────────────────
+// 'closed-front'  → portada exterior visible
+// 'open'          → páginas visibles
+// 'closed-back'   → contraportada exterior visible
+function setBookState(state) {
+  const book = D.book;
+  // Limpiar clases de estado anteriores
+  book.classList.remove('closed', 'open', 'closed-back', 'opening', 'closing');
+
+  if (state === 'closed-front') {
+    S.bookOpen = false; S.showBack = false;
+    book.classList.add('closed');
+    D.coverFront.classList.remove('hidden');
+    D.coverBack.classList.add('hidden');
+    D.groundShadow.style.opacity = '0.5';
+  } else if (state === 'open') {
+    S.bookOpen = true; S.showBack = false;
+    book.classList.add('open');
+    D.coverFront.classList.add('hidden');
+    D.coverBack.classList.add('hidden');
+    D.groundShadow.style.opacity = '0.65';
+  } else if (state === 'closed-back') {
+    S.bookOpen = false; S.showBack = true;
+    book.classList.add('closed', 'closed-back');
+    D.coverFront.classList.add('hidden');
+    D.coverBack.classList.remove('hidden');
+    D.groundShadow.style.opacity = '0.5';
+  }
 }
 
+// ── Apertura cinematográfica (Tier-3 / cinematic-ui) ─────────
 function abrirLibro() {
-  if (STATE.bookOpen || STATE.flipping) return;
-  STATE.bookOpen = true;
-  STATE.vistaActual = 0;
-  // Tier-3: apertura cinematic
-  dom.book.className = 'book opening';
-  dom.book.addEventListener('animationend', () => {
-    dom.book.className = 'book open';
-    renderVista(0, false);
+  if (S.bookOpen || S.flipping) return;
+  const book = D.book;
+  // Tier-3: animación de apertura con escala + rotateX
+  book.classList.add('opening');
+  book.addEventListener('animationend', () => {
+    book.classList.remove('opening');
+    setBookState('open');
+    S.vista = 0;
+    renderVista(0);
     updateNav();
   }, { once: true });
   launchConfetti(50);
-  spawnParticles(window.innerWidth / 2, window.innerHeight / 2, 12);
+  spawnFx(window.innerWidth / 2, window.innerHeight / 2, 12);
 }
 
+// ── Cierre del libro ──────────────────────────────────────────
 function cerrarLibro() {
-  if (!STATE.bookOpen || STATE.flipping) return;
-  STATE.bookOpen = false;
-  dom.book.className = 'book closing';
-  dom.book.addEventListener('animationend', () => {
-    renderCoverClosed('back');
+  if (!S.bookOpen || S.flipping) return;
+  const book = D.book;
+  book.classList.add('closing');
+  book.addEventListener('animationend', () => {
+    book.classList.remove('closing');
+    setBookState('closed-back');
+    updateNav();
     showToast('Libro cerrado 💗');
-    updateNav();
   }, { once: true });
 }
 
+// ── Restaurar al inicio ───────────────────────────────────────
 function restaurarInicio() {
-  STATE.bookOpen = false;
-  STATE.flipping = false;
-  STATE.vistaActual = 0;
-  STATE.bookShowingBack = false;
-  dom.book.className = 'book closed';
-  dom.pageRightInner.className = 'book-page-inner';
-  dom.pageRightInner.style.transform = '';
-  dom.coverFront.style.opacity = '';
-  dom.coverBack.style.opacity = '';
+  S.flipping = false;
+  S.vista = 0;
+  // Reset del pageRInner sin animación
+  D.pageRInner.style.transition = 'none';
+  D.pageRInner.classList.remove('flip-fwd');
+  D.pageRInner.style.transform = '';
+  void D.pageRInner.offsetWidth;
+  D.pageRInner.style.transition = '';
+  // Ocultar sombra/brillo
+  D.flipShadow.style.opacity = '0';
+  D.flipShine.style.opacity  = '0';
+  setBookState('closed-front');
   updateNav();
 }
 
 // ════════════════════════════════════════════
-// RENDERIZADO DE VISTAS (pares de páginas)
+// RENDERIZADO DE PÁGINAS
 // ════════════════════════════════════════════
-function buildPageHTML(descriptor) {
-  if (!descriptor) return '<div class="page-content-wrap"></div>';
+function buildPageHTML(desc) {
+  if (!desc) return '<div class="pg-wrap"></div>';
+  const t = CONFIG.tapas;
 
-  switch (descriptor.type) {
+  switch (desc.type) {
+
     case 'portada_interior': {
-      const cfg = CONFIG.portada_interior_default;
-      return `<div class="page-content-wrap inner-cover" style="background:${cfg.color_fondo}">
-        <div class="inner-cover-ornament">🌸</div>
-        <div class="inner-cover-text">${cfg.texto}</div>
-        <div class="inner-cover-sub">${cfg.subtexto}</div>
-      </div>`;
-    }
-    case 'contraportada_interior': {
-      const cfg = CONFIG.contraportada_interior_default;
-      return `<div class="page-content-wrap inner-cover" style="background:${cfg.color_fondo}">
-        <div class="inner-cover-ornament">💗</div>
-        <div class="inner-cover-text">${cfg.texto}</div>
-        <div class="inner-cover-sub">${cfg.subtexto}</div>
-      </div>`;
-    }
-    case 'contraportada_exterior': {
-      return `<div class="page-content-wrap inner-cover" style="background:linear-gradient(160deg,#fce4ec,#f8bbd0)">
-        <div class="inner-cover-ornament">💕</div>
-        <div class="inner-cover-text">${CONFIG.contraportada_texto}</div>
-        <div class="inner-cover-sub">${CONFIG.contraportada_subtexto}</div>
-      </div>`;
-    }
-    case 'pagina': {
-      const pag = CONFIG.paginas[descriptor.idx];
-      if (!pag) return '<div class="page-content-wrap"></div>';
-      return `<div class="page-content-wrap">
-        <div class="page-img-wrap">
-          <img class="page-img" src="${pag.imagen}" alt="Página ${descriptor.idx + 1}" loading="lazy"
-            onerror="this.style.background='#fce4ec';this.removeAttribute('src')">
+      const cfg = t.portadaInterior;
+      return `<div class="pg-wrap" style="padding:0;position:relative;overflow:hidden">
+        <img src="${cfg.imagen}" alt="Portada interior"
+          style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"
+          onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        <div class="tapa-wrap" style="display:none;position:relative;z-index:1">
+          <div class="tapa-ornament">🌸</div>
+          <div class="tapa-overlay">
+            <div class="tapa-text">${cfg.textoDefault}</div>
+            <div class="tapa-sub">${cfg.subDefault}</div>
+          </div>
         </div>
-        <p class="page-frase">${pag.frase || ''}</p>
       </div>`;
     }
-    default:
-      return '<div class="page-content-wrap"></div>';
+
+    case 'contraportada_interior': {
+      const cfg = t.contraportadaInterior;
+      return `<div class="pg-wrap" style="padding:0;position:relative;overflow:hidden">
+        <img src="${cfg.imagen}" alt="Contraportada interior"
+          style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"
+          onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        <div class="tapa-wrap" style="display:none;position:relative;z-index:1">
+          <div class="tapa-ornament">💗</div>
+          <div class="tapa-overlay">
+            <div class="tapa-text">${cfg.textoDefault}</div>
+            <div class="tapa-sub">${cfg.subDefault}</div>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    case 'contraportada_exterior': {
+      const cfg = t.contraportada;
+      return `<div class="pg-wrap" style="padding:0;position:relative;overflow:hidden">
+        <img src="${cfg.imagen}" alt="Contraportada"
+          style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"
+          onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        <div class="tapa-wrap" style="display:none;position:relative;z-index:1">
+          <div class="tapa-ornament">💕</div>
+          <div class="tapa-overlay">
+            <div class="tapa-text">${cfg.texto}</div>
+            <div class="tapa-sub">${cfg.subtexto}</div>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    case 'pagina': {
+      const pag = CONFIG.paginas[desc.idx];
+      if (!pag) return '<div class="pg-wrap"></div>';
+      return `<div class="pg-wrap">
+        <div class="pg-img-box">
+          <img class="pg-img" src="${pag.imagen}" alt="Página ${desc.idx+1}" loading="lazy"
+            onerror="this.style.background='var(--r0)';this.removeAttribute('src')">
+        </div>
+        <p class="pg-frase">${pag.frase || ''}</p>
+      </div>`;
+    }
+
+    default: return '<div class="pg-wrap"></div>';
   }
 }
 
-function renderVista(vistaIdx, animate) {
+function renderVista(vistaIdx) {
   if (vistaIdx < 0 || vistaIdx >= VISTAS.length) return;
-  const vista = VISTAS[vistaIdx];
-  dom.pageLeftContent.innerHTML  = buildPageHTML(vista.left);
-  dom.pageRightContent.innerHTML = buildPageHTML(vista.right);
-  // Pre-renderizar la siguiente vista en el "back" de la página derecha
-  const nextVista = VISTAS[vistaIdx + 1];
-  dom.pageRightBack.innerHTML = nextVista ? buildPageHTML(nextVista.right) : '';
-  dom.pageLeftBack.innerHTML  = nextVista ? buildPageHTML(nextVista.left) : '';
+  const v = VISTAS[vistaIdx];
+  D.pageLFront.innerHTML = buildPageHTML(v.left);
+  D.pageRFront.innerHTML = buildPageHTML(v.right);
+  // Pre-renderizar la vista siguiente en las caras traseras (para el volteo)
+  preRenderNext(vistaIdx);
 }
 
-// ════════════════════════════════════════════
-// VOLTEO DE PÁGINA (Tier-2 + Tier-3)
-// Emil: no 'all', exactamente transform.
-// Apple: interruptible (bloqueamos solo durante el vuelo, re-habilitamos al terminar).
-// ════════════════════════════════════════════
-function voltearPaginaAdelante() {
-  if (STATE.flipping) return;
-  if (STATE.vistaActual >= VISTAS.length - 1) {
-    // Llegamos al final → cerrar el libro (muestra contraportada)
-    cerrarLibro();
-    return;
+function preRenderNext(vistaIdx) {
+  const next = VISTAS[vistaIdx + 1];
+  if (next) {
+    D.pageRBack.innerHTML = buildPageHTML(next.right);
+    D.pageLBack.innerHTML = buildPageHTML(next.left);
+  } else {
+    D.pageRBack.innerHTML = '';
+    D.pageLBack.innerHTML = '';
   }
-  STATE.flipping = true;
-
-  const siguienteVista = STATE.vistaActual + 1;
-  // Pre-cargar la siguiente vista en el "back"
-  const nextVista = VISTAS[siguienteVista];
-  dom.pageRightBack.innerHTML = nextVista ? buildPageHTML(nextVista.right) : '';
-  dom.pageLeftBack.innerHTML  = nextVista ? buildPageHTML(nextVista.left)  : '';
-
-  // Iniciar volteo: clase 'flipping-fwd' activa la transición CSS rotateY(-180deg)
-  dom.pageRightInner.classList.add('flipping-fwd');
-
-  dom.pageRightInner.addEventListener('transitionend', () => {
-    // Al terminar el vuelo: actualizar la vista, quitar la clase, snap de vuelta
-    STATE.vistaActual = siguienteVista;
-    renderVista(STATE.vistaActual, false);
-    dom.pageRightInner.classList.remove('flipping-fwd');
-    dom.pageRightInner.style.transform = '';
-    STATE.flipping = false;
-    updateNav();
-  }, { once: true });
-
-  updateNav();
-}
-
-function voltearPaginaAtras() {
-  if (STATE.flipping) return;
-  if (STATE.vistaActual <= 0) return;
-  STATE.flipping = true;
-
-  const anteriorVista = STATE.vistaActual - 1;
-  // Pre-cargar anterior en el back
-  const prevVista = VISTAS[anteriorVista];
-  dom.pageRightBack.innerHTML = buildPageHTML(prevVista?.right);
-  dom.pageLeftBack.innerHTML  = buildPageHTML(prevVista?.left);
-
-  // Partir desde -180 y animar a 0 → efecto de vuelta atrás
-  dom.pageRightInner.style.transition = 'none';
-  dom.pageRightInner.style.transform  = 'rotateY(-180deg)';
-  void dom.pageRightInner.offsetWidth; // reflow
-  dom.pageRightInner.style.transition = '';
-  dom.pageRightInner.classList.add('flipping-back');
-
-  dom.pageRightInner.addEventListener('transitionend', () => {
-    STATE.vistaActual = anteriorVista;
-    renderVista(STATE.vistaActual, false);
-    dom.pageRightInner.classList.remove('flipping-back');
-    dom.pageRightInner.style.transform = '';
-    STATE.flipping = false;
-    updateNav();
-  }, { once: true });
-
-  updateNav();
 }
 
 // ════════════════════════════════════════════
-// SWIPE / DRAG (Apple: 1:1 tracking + velocidad)
+// VOLTEO CON CURVATURA 3D REALISTA
+// cinematic-ui: sombra y brillo dinámicos animados
+// Emil: transition exacta, sin 'all'
+// Apple: interruptible — si está en vuelo se puede cortar
+// ════════════════════════════════════════════
+function voltearAdelante() {
+  if (S.flipping) return;
+  if (S.vista >= VISTAS.length - 1) { cerrarLibro(); return; }
+  S.flipping = true; S.flipDir = 1;
+
+  // Pre-renderizar siguiente en back
+  preRenderNext(S.vista);
+
+  // 1) Activar sombra y brillo (curvatura 3D) — animar via JS para control fino
+  animateCurvatura('fwd');
+
+  // 2) Iniciar la rotación CSS
+  D.pageRInner.classList.add('flip-fwd');
+
+  D.pageRInner.addEventListener('transitionend', () => {
+    // snap: actualizar estado, quitar clase, resetear transform sin animación
+    S.vista++;
+    renderVista(S.vista);
+    // Reset sin transición (Emil: no usar 'all')
+    D.pageRInner.style.transition = 'none';
+    D.pageRInner.classList.remove('flip-fwd');
+    D.pageRInner.style.transform  = '';
+    void D.pageRInner.offsetWidth; // reflow
+    D.pageRInner.style.transition = '';
+    // Ocultar curvatura
+    D.flipShadow.style.opacity = '0';
+    D.flipShine.style.opacity  = '0';
+    S.flipping = false;
+    updateNav();
+  }, { once: true });
+
+  updateNav();
+}
+
+function voltearAtras() {
+  if (S.flipping) return;
+  if (S.vista <= 0) return;
+  S.flipping = true; S.flipDir = -1;
+
+  // Pre-renderizar anterior en back
+  const prev = VISTAS[S.vista - 1];
+  D.pageRBack.innerHTML = prev ? buildPageHTML(prev.right) : '';
+  D.pageLBack.innerHTML = prev ? buildPageHTML(prev.left)  : '';
+
+  // Partir desde rotateY(-180deg) y animar a 0 → efecto retroceso
+  D.pageRInner.style.transition = 'none';
+  D.pageRInner.style.transform  = 'rotateY(-180deg)';
+  void D.pageRInner.offsetWidth;
+  D.pageRInner.style.transition = ''; // reactivar CSS transition
+
+  animateCurvatura('back');
+
+  // La transición de 0deg se dispara automáticamente al quitar el transform forzado
+  D.pageRInner.addEventListener('transitionend', () => {
+    S.vista--;
+    renderVista(S.vista);
+    D.pageRInner.style.transition = 'none';
+    D.pageRInner.style.transform  = '';
+    void D.pageRInner.offsetWidth;
+    D.pageRInner.style.transition = '';
+    D.flipShadow.style.opacity = '0';
+    D.flipShine.style.opacity  = '0';
+    S.flipping = false;
+    updateNav();
+  }, { once: true });
+
+  updateNav();
+}
+
+// Animación de sombra y brillo sincronizada con el volteo (curvatura 3D)
+// cinematic-ui: la luz se mueve como en papel real
+function animateCurvatura(dir) {
+  const dur = CONFIG.duracionVolteo;
+  const start = performance.now();
+
+  function frame(now) {
+    const t = Math.min(1, (now - start) / dur);
+    // Curva de sombra: máxima a mitad del volteo, mínima al inicio/final
+    const curvature = Math.sin(t * Math.PI);
+    D.flipShadow.style.opacity = (curvature * 0.65).toFixed(3);
+    D.flipShine.style.opacity  = (curvature * 0.55).toFixed(3);
+
+    // El brillo se mueve de izquierda a derecha (o derecha a izquierda en back)
+    const pos = dir === 'fwd' ? 30 + t * 40 : 70 - t * 40;
+    D.flipShine.style.background = `linear-gradient(90deg,
+      transparent ${pos - 12}%,
+      rgba(255,255,255,0.32) ${pos}%,
+      rgba(255,255,255,0.10) ${pos + 8}%,
+      transparent ${pos + 20}%)`;
+
+    if (t < 1 && S.flipping) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+// ════════════════════════════════════════════
+// SWIPE CON FÍSICA (Apple design)
+// • 1:1 tracking: el pliegue sigue exactamente al dedo
+// • Umbral de velocidad + distancia para decidir si voltear
+// • Rubber-banding al superar el límite
+// • Interrupción: si hay volteo en vuelo, se puede cancelar
+// • Nunca llama a 'all' en transition (Emil)
 // ════════════════════════════════════════════
 function initSwipe() {
-  const target = dom.bookStage;
-  let startX = 0, startTime = 0;
+  const target = D.bookStage;
 
-  target.addEventListener('pointerdown', e => {
-    if (STATE.flipping || !STATE.bookOpen) return;
-    startX = e.clientX;
-    startTime = Date.now();
-    STATE.dragging = true;
-    target.setPointerCapture(e.pointerId);
-  });
+  // ── Pointer events (unifica mouse + touch) ──
+  target.addEventListener('pointerdown', onSwipeStart, { passive: true });
+  target.addEventListener('pointermove', onSwipeMove, { passive: true });
+  target.addEventListener('pointerup',   onSwipeEnd,   { passive: true });
+  target.addEventListener('pointercancel', resetSwipe, { passive: true });
+}
 
-  target.addEventListener('pointerup', e => {
-    if (!STATE.dragging) return;
-    STATE.dragging = false;
-    const dx = e.clientX - startX;
-    const dt = Date.now() - startTime;
-    const velocidad = Math.abs(dx) / dt; // px/ms
+function onSwipeStart(e) {
+  if (!S.bookOpen) return;
+  // Apple: no bloquear si el volteo está en vuelo (interrupción posible)
+  S.swipeStartX    = e.clientX;
+  S.swipeStartY    = e.clientY;
+  S.swipeStartTime = performance.now();
+  S.swipeDelta     = 0;
+  S.swipePeaking   = false;
+}
 
-    // Umbral: más de 40px O velocidad > 0.3px/ms
-    if (dx < -40 || (dx < -10 && velocidad > 0.3)) voltearPaginaAdelante();
-    else if (dx > 40 || (dx > 10 && velocidad > 0.3)) voltearPaginaAtras();
-  });
+function onSwipeMove(e) {
+  if (S.swipeStartX === null) return;
 
-  target.addEventListener('pointercancel', () => { STATE.dragging = false; });
+  const dx = e.clientX - S.swipeStartX;
+  const dy = e.clientY - S.swipeStartY;
+
+  // Ignorar si el gesto es más vertical que horizontal (scroll)
+  if (Math.abs(dy) > Math.abs(dx) * 1.4) { resetSwipe(); return; }
+
+  S.swipeDelta = dx;
+
+  // 1:1 tracking — la página sigue exactamente al dedo (en grados)
+  // Máximo útil: ±180deg (volteo completo)
+  const maxDx   = D.pageR.offsetWidth || 280;
+  const ratio   = Math.max(-1, Math.min(1, dx / maxDx));
+  const degrees = ratio * 180; // -180..180
+
+  // Rubber-banding: resistencia exponencial al superar el ancho de página
+  const absRatio = Math.abs(ratio);
+  const rubberDeg = absRatio > 0.85
+    ? Math.sign(degrees) * (153 + (absRatio - 0.85) * 200)
+    : degrees;
+
+  // Si está flipping en vuelo, ignorar (interrupción solo al soltar)
+  if (S.flipping) return;
+
+  // Aplicar rotación 1:1 SIN transition (tracking directo)
+  D.pageRInner.style.transition = 'none';
+
+  if (dx < 0) {
+    // Deslizar hacia izquierda → volteo adelante
+    if (S.vista < VISTAS.length - 1) {
+      D.pageRInner.style.transform = `rotateY(${Math.max(-180, rubberDeg)}deg)`;
+      // Curvatura proporcional al progreso
+      const prog = Math.min(1, Math.abs(ratio) * 2);
+      const curve = Math.sin(prog * Math.PI);
+      D.flipShadow.style.opacity = (curve * 0.6).toFixed(3);
+      D.flipShine.style.opacity  = (curve * 0.5).toFixed(3);
+      S.swipePeaking = Math.abs(dx) > maxDx * 0.3;
+    }
+  } else if (dx > 0) {
+    // Deslizar hacia derecha → volteo atrás (solo si hay vista anterior)
+    if (S.vista > 0) {
+      const backDeg = Math.min(0, -180 + Math.min(180, Math.abs(rubberDeg)));
+      D.pageRInner.style.transform = `rotateY(${backDeg}deg)`;
+      const prog = Math.min(1, Math.abs(ratio) * 2);
+      const curve = Math.sin(prog * Math.PI);
+      D.flipShadow.style.opacity = (curve * 0.5).toFixed(3);
+      D.flipShine.style.opacity  = (curve * 0.45).toFixed(3);
+    }
+  }
+}
+
+function onSwipeEnd(e) {
+  if (S.swipeStartX === null) return;
+
+  const dx  = e.clientX - S.swipeStartX;
+  const dt  = performance.now() - S.swipeStartTime;
+  const vel = dt > 0 ? Math.abs(dx) / dt : 0; // px/ms — velocidad
+
+  const maxDx    = D.pageR.offsetWidth || 280;
+  const threshold = maxDx * 0.28;  // 28% del ancho de página
+  const velThresh = 0.28;           // px/ms (velocidad mínima)
+
+  // Restaurar transition CSS
+  D.pageRInner.style.transition = '';
+
+  if (!S.flipping) {
+    if (dx < -threshold || (dx < -30 && vel > velThresh)) {
+      // Supera umbral → completar volteo adelante con inercia
+      voltearAdelante();
+    } else if (dx > threshold || (dx > 30 && vel > velThresh)) {
+      // Supera umbral → completar volteo atrás con inercia
+      voltearAtras();
+    } else {
+      // No supera umbral → snap de regreso a posición original (spring)
+      snapBack();
+    }
+  }
+
+  resetSwipe();
+}
+
+function resetSwipe() {
+  S.swipeStartX    = null;
+  S.swipeStartY    = null;
+  S.swipeDelta     = 0;
+  S.swipePeaking   = false;
+}
+
+function snapBack() {
+  // Spring de regreso: usar transition corta con ease-out (Emil)
+  D.pageRInner.style.transition = `transform 260ms cubic-bezier(0.23,1,0.32,1)`;
+  D.pageRInner.style.transform  = 'rotateY(0deg)';
+  D.flipShadow.style.opacity    = '0';
+  D.flipShine.style.opacity     = '0';
+  D.pageRInner.addEventListener('transitionend', () => {
+    D.pageRInner.style.transition = '';
+    D.pageRInner.style.transform  = '';
+  }, { once: true });
 }
 
 // ════════════════════════════════════════════
 // BOTONES DE NAVEGACIÓN
 // ════════════════════════════════════════════
-function initNavButtons() {
-  dom.btnNext.addEventListener('click', () => {
-    if (STATE.bookOpen) voltearPaginaAdelante();
-    else if (STATE.bookShowingBack) restaurarInicio();
-    else abrirLibro();
+function initBookEvents() {
+  // Portada: click abre el libro
+  D.coverFront.addEventListener('click', () => { if (!S.bookOpen) abrirLibro(); });
+
+  // Botón siguiente
+  D.btnNext.addEventListener('click', () => {
+    if (!S.bookOpen) { abrirLibro(); return; }
+    voltearAdelante();
   });
-  dom.btnPrev.addEventListener('click', () => {
-    if (!STATE.bookOpen) return;
-    if (STATE.vistaActual === 0) cerrarLibro();
-    else voltearPaginaAtras();
+
+  // Botón anterior
+  D.btnPrev.addEventListener('click', () => {
+    if (!S.bookOpen) return;
+    if (S.vista === 0) { cerrarLibro(); return; }
+    voltearAtras();
   });
-  dom.btnClose.addEventListener('click', () => {
-    if (STATE.bookOpen) cerrarLibro();
+
+  // Botón cerrar
+  D.btnClose.addEventListener('click', () => { if (S.bookOpen) cerrarLibro(); });
+
+  // Botón restaurar
+  D.btnRestore.addEventListener('click', restaurarInicio);
+
+  // Inicializar swipe
+  initSwipe();
+
+  // Teclado
+  document.addEventListener('keydown', e => {
+    if (S.fase !== 'book') return;
+    if (e.key === 'ArrowRight') D.btnNext.click();
+    if (e.key === 'ArrowLeft')  D.btnPrev.click();
   });
-  dom.btnRestore.addEventListener('click', restaurarInicio);
-  // También la portada cerrada
-  dom.coverFront.addEventListener('click', () => { if (!STATE.bookOpen) abrirLibro(); });
 }
 
+// ════════════════════════════════════════════
+// NAVEGACIÓN — ESTADO DE UI
+// ════════════════════════════════════════════
 function updateNav() {
-  const total = VISTAS.length;
-  const actual = STATE.vistaActual + 1;
+  const total  = VISTAS.length;
+  const actual = S.vista + 1;
+
   // Label
-  if (!STATE.bookOpen) {
-    dom.navLabel.textContent = STATE.bookShowingBack ? 'Contraportada' : 'Portada';
+  if (!S.bookOpen) {
+    D.navLabel.textContent = S.showBack ? 'Contraportada' : 'Portada';
   } else {
-    dom.navLabel.textContent = `Vista ${actual} de ${total}`;
+    D.navLabel.textContent = `Vista ${actual} de ${total}`;
   }
+
   // Barra de progreso
-  const pct = STATE.bookOpen ? (actual / total) * 100 : (STATE.bookShowingBack ? 100 : 0);
-  dom.navProgressFill.style.width = pct + '%';
-  // Botones deshabilitados en límites
-  dom.btnPrev.disabled = !STATE.bookOpen || STATE.flipping;
-  dom.btnNext.disabled = STATE.flipping;
-  // Botón de cerrar
-  dom.btnClose.style.opacity = STATE.bookOpen ? '1' : '0.4';
-  dom.btnClose.style.pointerEvents = STATE.bookOpen ? 'auto' : 'none';
+  const pct = S.bookOpen ? (actual / total) * 100 : (S.showBack ? 100 : 0);
+  D.navFill.style.width = pct + '%';
+
+  // Deshabilitar botones en límites
+  D.btnPrev.disabled = S.flipping || (!S.bookOpen);
+  D.btnNext.disabled = S.flipping;
+
+  // Opacidad del botón cerrar
+  D.btnClose.style.opacity       = S.bookOpen ? '1' : '0.35';
+  D.btnClose.style.pointerEvents = S.bookOpen ? 'auto' : 'none';
 }
 
 // ════════════════════════════════════════════
 // REPRODUCTOR DE MÚSICA
 // ════════════════════════════════════════════
 function initPlayer() {
-  dom.playerToggle.addEventListener('click', e => { e.stopPropagation(); togglePlayerPanel(); });
-  dom.playerPlay.addEventListener('click',   e => { e.stopPropagation(); togglePlay(); });
-  dom.playerPrev.addEventListener('click',   e => { e.stopPropagation(); changeSong(-1); });
-  dom.playerNext.addEventListener('click',   e => { e.stopPropagation(); changeSong(1); });
+  D.playerToggle.addEventListener('click', e => { e.stopPropagation(); togglePlayer(); });
+  D.pcPlay.addEventListener('click', e => { e.stopPropagation(); togglePlay(); });
+  D.pcPrev.addEventListener('click', e => { e.stopPropagation(); changeSong(-1); });
+  D.pcNext.addEventListener('click', e => { e.stopPropagation(); changeSong(1); });
 
-  dom.playerTrack.addEventListener('click', e => {
-    if (!dom.bookAudio.duration) return;
-    const r = dom.playerTrack.getBoundingClientRect();
-    dom.bookAudio.currentTime = ((e.clientX - r.left) / r.width) * dom.bookAudio.duration;
+  D.playerTrack.addEventListener('click', e => {
+    if (!D.audio.duration) return;
+    const r = D.playerTrack.getBoundingClientRect();
+    D.audio.currentTime = ((e.clientX - r.left) / r.width) * D.audio.duration;
   });
 
-  dom.playerVol.addEventListener('input', e => {
-    dom.bookAudio.volume = e.target.value;
-    const pct = e.target.value * 100;
-    e.target.style.background = `linear-gradient(90deg, var(--rose-400) ${pct}%, var(--rose-100) ${pct}%)`;
+  D.playerVol.addEventListener('input', e => {
+    D.audio.volume = +e.target.value;
+    const p = +e.target.value * 100;
+    e.target.style.background =
+      `linear-gradient(90deg,var(--r4) ${p}%,var(--r1) ${p}%)`;
   });
 
-  dom.bookAudio.addEventListener('timeupdate', updatePlayerProgress);
-  dom.bookAudio.addEventListener('play',  () => {
-    STATE.playing = true;
-    dom.playerPlay.textContent = '⏸';
-    dom.playerDisc.classList.add('playing');
+  D.audio.addEventListener('timeupdate', updateProgress);
+  D.audio.addEventListener('play',  () => {
+    S.playing = true;
+    D.pcPlay.textContent = '⏸';
+    D.playerDisc.classList.add('playing');
   });
-  dom.bookAudio.addEventListener('pause', () => {
-    STATE.playing = false;
-    dom.playerPlay.textContent = '▶';
-    dom.playerDisc.classList.remove('playing');
+  D.audio.addEventListener('pause', () => {
+    S.playing = false;
+    D.pcPlay.textContent = '▶';
+    D.playerDisc.classList.remove('playing');
   });
-  dom.bookAudio.addEventListener('ended', () => changeSong(1));
-  dom.bookAudio.volume = 0.7;
+  D.audio.addEventListener('ended', () => changeSong(1));
+  D.audio.volume = 0.7;
 
+  // Iniciar en mini (cerrado)
+  D.playerBody.classList.add('mini');
   loadSong(0, false);
 }
 
-function initMusicOnInteract() {
-  const tryPlay = () => {
-    dom.bookAudio.play().catch(() => {});
-    document.removeEventListener('pointerdown', tryPlay);
+function startMusicOnInteract() {
+  const go = () => {
+    D.audio.play().catch(() => {});
+    document.removeEventListener('pointerdown', go);
   };
-  document.addEventListener('pointerdown', tryPlay, { once: true });
+  document.addEventListener('pointerdown', go, { once: true });
 }
 
 function loadSong(idx, autoplay = true) {
-  STATE.songIdx = ((idx % CONFIG.canciones.length) + CONFIG.canciones.length) % CONFIG.canciones.length;
-  const song = CONFIG.canciones[STATE.songIdx];
-  dom.bookAudio.src = song.archivo;
-  dom.playerName.textContent = song.nombre;
-  if (autoplay) dom.bookAudio.play().catch(() => {});
+  S.songIdx = ((idx % CONFIG.playlist.length) + CONFIG.playlist.length) % CONFIG.playlist.length;
+  const song = CONFIG.playlist[S.songIdx];
+  D.audio.src       = song.archivo;
+  D.playerName.textContent = song.nombre;
+  if (autoplay) D.audio.play().catch(() => {});
+}
+function togglePlay()  { S.playing ? D.audio.pause() : D.audio.play().catch(() => {}); }
+function changeSong(d) { loadSong(S.songIdx + d); }
+function togglePlayer() {
+  S.playerOpen = !S.playerOpen;
+  D.playerBody.classList.toggle('mini', !S.playerOpen);
 }
 
-function togglePlay() {
-  if (STATE.playing) dom.bookAudio.pause();
-  else dom.bookAudio.play().catch(() => {});
+function updateProgress() {
+  if (!D.audio.duration) return;
+  const pct = D.audio.currentTime / D.audio.duration * 100;
+  D.playerFill.style.width = pct + '%';
+  D.playerKnob.style.left  = pct + '%';
+  D.playerCur.textContent  = fmt(D.audio.currentTime);
+  D.playerTot.textContent  = fmt(D.audio.duration);
 }
-function changeSong(dir) { loadSong(STATE.songIdx + dir); }
-
-function updatePlayerProgress() {
-  if (!dom.bookAudio.duration) return;
-  const pct = dom.bookAudio.currentTime / dom.bookAudio.duration * 100;
-  dom.playerFill.style.width  = pct + '%';
-  dom.playerThumb.style.left  = pct + '%';
-  dom.playerCur.textContent   = fmtTime(dom.bookAudio.currentTime);
-  dom.playerTot.textContent   = fmtTime(dom.bookAudio.duration);
-}
-
-function togglePlayerPanel() {
-  STATE.playerOpen = !STATE.playerOpen;
-  dom.playerPanel.classList.toggle('mini', !STATE.playerOpen);
-}
-
-function fmtTime(s) {
+function fmt(s) {
   if (isNaN(s)) return '0:00';
   const m = Math.floor(s / 60), ss = Math.floor(s % 60);
   return m + ':' + (ss < 10 ? '0' : '') + ss;
 }
 
 // ════════════════════════════════════════════
-// CANVAS DE BRILLOS (glow background)
-// Partículas de luz flotando en el fondo
+// CANVAS DE BRILLO DE FONDO (glow particles)
+// Partículas suaves, sin shadowBlur (rendimiento)
 // ════════════════════════════════════════════
-let glowParticles = [];
-let glowCtx, glowCanvas;
+let glowParts = [], glowCtx;
 
 function initGlowCanvas() {
-  glowCanvas = dom.glowCanvas;
-  glowCtx = glowCanvas.getContext('2d');
-  resizeGlowCanvas();
-  window.addEventListener('resize', resizeGlowCanvas);
-  spawnGlowParticles();
+  const cv = D.glowCanvas;
+  glowCtx = cv.getContext('2d');
+  resizeGlow();
+  window.addEventListener('resize', resizeGlow);
+  spawnGlow();
   requestAnimationFrame(loopGlow);
 }
 
-function resizeGlowCanvas() {
-  glowCanvas.width  = window.innerWidth;
-  glowCanvas.height = window.innerHeight;
+function resizeGlow() {
+  const cv = D.glowCanvas;
+  cv.width  = window.innerWidth;
+  cv.height = window.innerHeight;
 }
 
-function spawnGlowParticles() {
-  glowParticles = [];
-  const count = Math.min(60, Math.floor(window.innerWidth * window.innerHeight / 14000));
-  const colors = ['rgba(240,98,146,', 'rgba(213,0,99,', 'rgba(244,143,177,', 'rgba(243,229,245,'];
-  for (let i = 0; i < count; i++) {
-    glowParticles.push({
+function spawnGlow() {
+  glowParts = [];
+  const n = Math.min(55, Math.floor(window.innerWidth * window.innerHeight / 15000));
+  const cols = ['rgba(240,98,146,', 'rgba(213,0,99,', 'rgba(244,143,177,', 'rgba(229,115,115,'];
+  for (let i = 0; i < n; i++) {
+    glowParts.push({
       x: Math.random() * window.innerWidth,
       y: Math.random() * window.innerHeight,
       r: Math.random() * 3.5 + 1,
-      speedX: (Math.random() - 0.5) * 0.25,
-      speedY: (Math.random() - 0.5) * 0.25,
-      color: colors[Math.floor(Math.random() * colors.length)],
-      alpha: Math.random() * 0.45 + 0.08,
-      twinkle: Math.random() * Math.PI * 2,
-      twinkleSpeed: Math.random() * 0.025 + 0.008,
+      vx: (Math.random() - .5) * .22,
+      vy: (Math.random() - .5) * .22,
+      col: cols[Math.floor(Math.random() * cols.length)],
+      a:  Math.random() * .42 + .07,
+      tw: Math.random() * Math.PI * 2,
+      ts: Math.random() * .022 + .008,
     });
   }
 }
 
 function loopGlow() {
-  glowCtx.clearRect(0, 0, glowCanvas.width, glowCanvas.height);
-  glowParticles.forEach(p => {
-    p.x += p.speedX;
-    p.y += p.speedY;
-    p.twinkle += p.twinkleSpeed;
-    if (p.x < -10) p.x = glowCanvas.width + 10;
-    if (p.x > glowCanvas.width + 10) p.x = -10;
-    if (p.y < -10) p.y = glowCanvas.height + 10;
-    if (p.y > glowCanvas.height + 10) p.y = -10;
-    const a = p.alpha * (0.6 + Math.sin(p.twinkle) * 0.4);
-    const grad = glowCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 3);
-    grad.addColorStop(0, p.color + a + ')');
-    grad.addColorStop(1, p.color + '0)');
+  const cv = D.glowCanvas;
+  glowCtx.clearRect(0, 0, cv.width, cv.height);
+  glowParts.forEach(p => {
+    p.x  += p.vx; p.y += p.vy;
+    p.tw += p.ts;
+    if (p.x < -10) p.x = cv.width + 10;
+    if (p.x > cv.width  + 10) p.x = -10;
+    if (p.y < -10) p.y = cv.height + 10;
+    if (p.y > cv.height + 10) p.y = -10;
+    const alpha = p.a * (.6 + Math.sin(p.tw) * .4);
+    const g = glowCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 3.2);
+    g.addColorStop(0, p.col + alpha + ')');
+    g.addColorStop(1, p.col + '0)');
     glowCtx.beginPath();
-    glowCtx.arc(p.x, p.y, p.r * 3, 0, Math.PI * 2);
-    glowCtx.fillStyle = grad;
+    glowCtx.arc(p.x, p.y, p.r * 3.2, 0, Math.PI * 2);
+    glowCtx.fillStyle = g;
     glowCtx.fill();
   });
   requestAnimationFrame(loopGlow);
 }
 
 // ════════════════════════════════════════════
+// PARTÍCULAS DE CLIC (canvas FX)
+// Sin shadowBlur, tope global 400, decay fijo
+// ════════════════════════════════════════════
+let fxParts = [], fxRunning = false;
+let fxCtx;
+const MAX_FX = 400;
+const EMOJIS = ['💗','💕','💖','🌸','✨','🌷','💫','💝'];
+const WORDS  = ['Te amo','Siempre','Para ti','Amor','💗'];
+
+function initFxCanvas() {
+  const cv = D.fxCanvas;
+  cv.width  = window.innerWidth;
+  cv.height = window.innerHeight;
+  fxCtx = cv.getContext('2d');
+  window.addEventListener('resize', () => {
+    cv.width  = window.innerWidth;
+    cv.height = window.innerHeight;
+  });
+}
+
+function spawnFx(x, y, n = 10) {
+  const safe = Math.min(n, 14);
+  for (let i = 0; i < safe; i++) {
+    if (fxParts.length >= MAX_FX) break;
+    const emoji = Math.random() > .42;
+    const ang   = Math.random() * Math.PI * 2;
+    const spd   = Math.random() * 3 + 1.2;
+    fxParts.push({
+      x, y,
+      vx: Math.cos(ang) * spd,
+      vy: Math.sin(ang) * spd - 1.4,
+      g: .045, life: 1, decay: .022,
+      sz: emoji ? Math.random()*13+14 : Math.random()*4+9,
+      t:  emoji
+        ? EMOJIS[Math.floor(Math.random()*EMOJIS.length)]
+        : WORDS[Math.floor(Math.random()*WORDS.length)],
+      emoji,
+      col: ['#f06292','#e91e63','#f48fb1','#ab47bc'][Math.floor(Math.random()*4)],
+    });
+  }
+  if (!fxRunning) { fxRunning = true; requestAnimationFrame(loopFx); }
+}
+
+function loopFx() {
+  const cv = D.fxCanvas;
+  fxCtx.clearRect(0, 0, cv.width, cv.height);
+  fxCtx.textAlign    = 'center';
+  fxCtx.textBaseline = 'middle';
+
+  for (let i = fxParts.length - 1; i >= 0; i--) {
+    const p = fxParts[i];
+    p.x += p.vx; p.y += p.vy; p.vy += p.g; p.life -= p.decay;
+    if (p.life <= 0) { fxParts.splice(i, 1); continue; }
+    fxCtx.globalAlpha = Math.max(0, p.life);
+    fxCtx.font = p.emoji
+      ? `${p.sz}px sans-serif`
+      : `600 ${p.sz}px 'Dancing Script',cursive`;
+    fxCtx.fillStyle = p.col;
+    fxCtx.fillText(p.t, p.x, p.y);
+  }
+  fxCtx.globalAlpha = 1;
+  fxRunning = fxParts.length > 0;
+  if (fxRunning) requestAnimationFrame(loopFx);
+}
+
+// Partículas en clic de fondo (durante el libro)
+document.addEventListener('pointerdown', e => {
+  if (S.fase !== 'book') return;
+  if (e.target.closest('button, input, .player, .book-nav, .book-aux, .cover')) return;
+  spawnFx(e.clientX, e.clientY, 8);
+});
+
+// ════════════════════════════════════════════
 // CORAZONES FLOTANTES (siempre presentes)
 // ════════════════════════════════════════════
-function startFloatingHearts() {
-  const hearts = ['💗','💕','💖','🌸','✨','💝','🌷','💞'];
+function startHearts() {
+  const pool = ['💗','💕','💖','🌸','✨','💝','🌷','💞'];
   function spawn() {
     const el = document.createElement('div');
     el.className = 'heart-float';
-    el.textContent = hearts[Math.floor(Math.random() * hearts.length)];
-    el.style.left              = Math.random() * 100 + '%';
-    el.style.fontSize          = (Math.random() * 14 + 12) + 'px';
-    el.style.animationDuration = (Math.random() * 8 + 9) + 's';
-    el.style.animationDelay    = (Math.random() * 2) + 's';
-    el.style.opacity           = (Math.random() * 0.3 + 0.15).toFixed(2);
-    dom.heartsLayer.appendChild(el);
-    setTimeout(() => el.remove(), 18000);
+    el.textContent = pool[Math.floor(Math.random() * pool.length)];
+    el.style.cssText = `
+      left:${Math.random()*100}%;
+      font-size:${Math.random()*14+12}px;
+      animation-duration:${Math.random()*8+10}s;
+      animation-delay:${Math.random()*2}s;
+      opacity:${(Math.random()*.3+.14).toFixed(2)};
+    `;
+    D.heartsLayer.appendChild(el);
+    setTimeout(() => el.remove(), 20000);
   }
-  for (let i = 0; i < 8; i++) setTimeout(spawn, i * 400);
+  for (let i = 0; i < 8; i++) setTimeout(spawn, i * 350);
   setInterval(spawn, 1100);
-}
-
-// ════════════════════════════════════════════
-// PARTÍCULAS DE EXPLOSIÓN
-// (sistema optimizado: sin shadowBlur, tope global)
-// ════════════════════════════════════════════
-let clickParticles = [];
-let clickFxRunning = false;
-const MAX_CLICK_P = 400;
-const EMOJIS_P = ['💗','✨','🌸','💕','🌷','💫','💖'];
-const WORDS_P  = ['Te amo','Siempre','Amor','Para ti','💗'];
-
-function spawnParticles(x, y, count = 10) {
-  const safeCount = Math.min(count, 14);
-  for (let i = 0; i < safeCount; i++) {
-    if (clickParticles.length >= MAX_CLICK_P) break;
-    const useEmoji = Math.random() > 0.45;
-    const angle = Math.random() * Math.PI * 2;
-    const speed = Math.random() * 3 + 1.2;
-    clickParticles.push({
-      x, y,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed - 1.5,
-      gravity: 0.045,
-      life: 1, decay: 0.022,
-      size: useEmoji ? Math.random() * 13 + 14 : Math.random() * 4 + 9,
-      text: useEmoji
-        ? EMOJIS_P[Math.floor(Math.random() * EMOJIS_P.length)]
-        : WORDS_P[Math.floor(Math.random() * WORDS_P.length)],
-      isEmoji: useEmoji,
-      color: ['#f06292','#e91e63','#f48fb1','#ce93d8'][Math.floor(Math.random() * 4)],
-    });
-  }
-  if (!clickFxRunning) { clickFxRunning = true; requestAnimationFrame(loopParticles); }
-}
-
-// Canvas para partículas (creado bajo demanda, sin id fijo)
-let pCanvas = null, pCtx = null;
-function ensureParticleCanvas() {
-  if (pCanvas) return;
-  pCanvas = document.createElement('canvas');
-  pCanvas.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:8000;';
-  pCanvas.width = window.innerWidth;
-  pCanvas.height = window.innerHeight;
-  document.body.appendChild(pCanvas);
-  pCtx = pCanvas.getContext('2d');
-  window.addEventListener('resize', () => { if(pCanvas){pCanvas.width=window.innerWidth;pCanvas.height=window.innerHeight;} });
-}
-
-function loopParticles() {
-  ensureParticleCanvas();
-  pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
-  pCtx.textAlign = 'center';
-  pCtx.textBaseline = 'middle';
-
-  for (let i = clickParticles.length - 1; i >= 0; i--) {
-    const p = clickParticles[i];
-    p.x += p.vx; p.y += p.vy; p.vy += p.gravity; p.life -= p.decay;
-    if (p.life <= 0) { clickParticles.splice(i, 1); continue; }
-    pCtx.globalAlpha = Math.max(0, p.life);
-    pCtx.font = p.isEmoji ? `${p.size}px sans-serif` : `600 ${p.size}px 'Dancing Script',cursive`;
-    pCtx.fillStyle = p.color;
-    pCtx.fillText(p.text, p.x, p.y);
-  }
-  pCtx.globalAlpha = 1;
-  if (clickParticles.length > 0) requestAnimationFrame(loopParticles);
-  else clickFxRunning = false;
 }
 
 // ════════════════════════════════════════════
 // CONFETI
 // ════════════════════════════════════════════
-function launchConfetti(count = 80) {
-  const colors = ['#f06292','#f48fb1','#ce93d8','#fff9c4','#b2ebf2','#c8e6c9','#ffe0b2','#fce4ec'];
-  for (let i = 0; i < count; i++) {
+function launchConfetti(n = 80) {
+  const cols = ['#f06292','#f48fb1','#ce93d8','#fff176','#b2dfdb','#fce4ec'];
+  for (let i = 0; i < n; i++) {
     setTimeout(() => {
       const el = document.createElement('div');
-      el.className = 'confetti-piece';
+      el.className = 'cfp';
       el.style.cssText = `
         left:${Math.random()*100}vw;
-        background:${colors[Math.floor(Math.random()*colors.length)]};
-        width:${Math.random()*10+5}px; height:${Math.random()*10+5}px;
-        border-radius:${Math.random()>0.5?'50%':'3px'};
+        background:${cols[Math.floor(Math.random()*cols.length)]};
+        width:${Math.random()*10+5}px;
+        height:${Math.random()*10+5}px;
+        border-radius:${Math.random()>.5?'50%':'3px'};
         animation-duration:${Math.random()*2+1.5}s;
-        animation-delay:${Math.random()*0.4}s;
+        animation-delay:${Math.random()*.4}s;
       `;
-      dom.confettiCont.appendChild(el);
+      D.confettiCont.appendChild(el);
       setTimeout(() => el.remove(), 3500);
-    }, i * 12);
+    }, i * 11);
   }
 }
 
 // ════════════════════════════════════════════
-// TOAST
+// TOAST NOTIFICATION
 // ════════════════════════════════════════════
-let toastTimer = null;
+let toastTimer;
 function showToast(msg) {
-  dom.toast.textContent = msg;
-  dom.toast.classList.add('show');
+  D.toast.textContent = msg;
+  D.toast.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => dom.toast.classList.remove('show'), 3200);
+  toastTimer = setTimeout(() => D.toast.classList.remove('show'), 3200);
 }
-
-// ════════════════════════════════════════════
-// BOOTSTRAP FINAL: conectar todos los módulos
-// ════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', () => {
-  // Estos se ejecutan DESPUÉS del DOMContentLoaded principal en libro_p1.js
-  // porque ambos están en el mismo archivo concatenado.
-  // El DOMContentLoaded de p1 ya cachea el DOM y aplica config;
-  // aquí solo conectamos los botones del libro y el swipe.
-  // Usamos un pequeño timeout de 0 para asegurarnos que p1 terminó.
-  setTimeout(() => {
-    initNavButtons();
-    initSwipe();
-    // Inicializar panel del reproductor cerrado (mini) por defecto
-    dom.playerPanel.classList.add('mini');
-  }, 0);
-});
