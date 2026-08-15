@@ -11,121 +11,125 @@
 </head>
 <body>
 
-<!-- ── Corazones flotantes de fondo (siempre presentes) ── -->
-<div id="heartsLayer" class="hearts-layer" aria-hidden="true"></div>
+<!-- ── Capa de corazones siempre presentes ── -->
+<div id="heartsLayer" aria-hidden="true"></div>
 
-<!-- ── Partículas de brillo de fondo ── -->
-<canvas id="glowCanvas" class="glow-canvas" aria-hidden="true"></canvas>
+<!-- ── Canvas de brillo de fondo ── -->
+<canvas id="glowCanvas" aria-hidden="true"></canvas>
+
+<!-- ── Canvas de partículas de clic ── -->
+<canvas id="fxCanvas" aria-hidden="true"></canvas>
 
 <!-- ── Confeti ── -->
-<div id="confettiCont" class="confetti-cont" aria-hidden="true"></div>
+<div id="confettiCont" aria-hidden="true"></div>
 
-<!-- ── Notificación toast ── -->
+<!-- ── Toast notification ── -->
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-<!-- ══════════════════════════════════════════════════════
-     FASE 1 — PANTALLA DE ENTRADA (código + carta)
-════════════════════════════════════════════════════════ -->
+<!-- ══════════════════════════════════════════════════
+     FASE 1 — PANTALLA DE ENTRADA
+════════════════════════════════════════════════════ -->
 <div id="entryScreen" class="entry-screen">
 
-  <!-- Decoraciones de fondo de la entrada -->
-  <div class="entry-deco" aria-hidden="true">
-    <span class="entry-deco-ring ring-1"></span>
-    <span class="entry-deco-ring ring-2"></span>
-    <span class="entry-deco-ring ring-3"></span>
+  <div class="entry-bg-rings" aria-hidden="true">
+    <span class="ring r1"></span><span class="ring r2"></span><span class="ring r3"></span>
   </div>
 
-  <!-- ── PASO 1: Código de acceso ── -->
+  <!-- PASO 1 — Código de acceso -->
   <div id="stepCode" class="entry-step">
-    <div class="entry-card code-card">
-      <div class="entry-card-ornament">💗</div>
-      <h1 class="entry-title" id="entryTitle">Un regalo especial para ti</h1>
-      <p class="entry-subtitle" id="entrySubtitle">Ingresa tu código para abrir este regalo 💗</p>
-      <div class="code-dots" id="codeDots" aria-label="Campo de código">
-        <span class="code-dot"></span>
-        <span class="code-dot"></span>
-        <span class="code-dot"></span>
-        <span class="code-dot"></span>
-        <span class="code-dot"></span>
-        <span class="code-dot"></span>
+    <div class="entry-card">
+      <div class="entry-ornament" aria-hidden="true">💌</div>
+      <h1 class="entry-title" id="entryTitle"></h1>
+      <p  class="entry-sub"   id="entrySub"></p>
+      <div class="code-display" id="codeDisplay" role="group" aria-label="Código de acceso">
+        <span class="code-pip"></span><span class="code-pip"></span>
+        <span class="code-pip"></span><span class="code-pip"></span>
+        <span class="code-pip"></span><span class="code-pip"></span>
       </div>
       <div class="numpad" id="numpad" role="group" aria-label="Teclado numérico">
-        <button class="num-btn" data-digit="1">1</button>
-        <button class="num-btn" data-digit="2">2</button>
-        <button class="num-btn" data-digit="3">3</button>
-        <button class="num-btn" data-digit="4">4</button>
-        <button class="num-btn" data-digit="5">5</button>
-        <button class="num-btn" data-digit="6">6</button>
-        <button class="num-btn" data-digit="7">7</button>
-        <button class="num-btn" data-digit="8">8</button>
-        <button class="num-btn" data-digit="9">9</button>
-        <button class="num-btn num-clear" id="clearBtn" aria-label="Borrar">⌫</button>
-        <button class="num-btn" data-digit="0">0</button>
-        <button class="num-btn num-ok" id="confirmCodeBtn" aria-label="Confirmar">✓</button>
+        <button class="nk" data-d="1">1</button>
+        <button class="nk" data-d="2">2</button>
+        <button class="nk" data-d="3">3</button>
+        <button class="nk" data-d="4">4</button>
+        <button class="nk" data-d="5">5</button>
+        <button class="nk" data-d="6">6</button>
+        <button class="nk" data-d="7">7</button>
+        <button class="nk" data-d="8">8</button>
+        <button class="nk" data-d="9">9</button>
+        <button class="nk nk-del" id="delBtn" aria-label="Borrar">⌫</button>
+        <button class="nk" data-d="0">0</button>
+        <button class="nk nk-ok"  id="okBtn"  aria-label="Confirmar">✓</button>
       </div>
-      <p class="code-feedback" id="codeFeedback" role="alert"></p>
+      <p class="code-msg" id="codeMsg" role="alert"></p>
     </div>
   </div>
 
-  <!-- ── PASO 2: Ritual de clics (la carta) ── -->
-  <div id="stepCard" class="entry-step hidden">
-    <div class="entry-card carta-card" id="cartaCard">
-      <!-- Sellito decorativo -->
-      <div class="carta-seal" aria-hidden="true">💌</div>
-      <!-- Contenido normal (antes de abrir) -->
-      <div class="carta-closed-content" id="cartaClosedContent">
-        <h2 class="carta-titulo" id="cartaTitulo">Tengo algo especial para ti</h2>
-        <p class="carta-subtitulo" id="cartaSubtitulo">Toca la carta para abrirla poco a poco... 💗</p>
-        <!-- Progreso de clics -->
-        <div class="carta-progress-wrap">
-          <svg class="carta-progress-ring" viewBox="0 0 120 120" aria-hidden="true">
-            <circle class="carta-ring-bg" cx="60" cy="60" r="54"/>
-            <circle class="carta-ring-fg" id="cartaRingFg" cx="60" cy="60" r="54"/>
-          </svg>
-          <div class="carta-progress-center">
-            <span class="carta-click-count" id="cartaClickCount">0</span>
-            <span class="carta-click-total" id="cartaClickTotal">/ 30</span>
+  <!-- PASO 2 — Ritual de clics (la carta) -->
+  <div id="stepCarta" class="entry-step hidden">
+    <div class="carta-wrap" id="cartaWrap">
+      <!-- Marco de carta estilo envelope -->
+      <div class="carta-envelope" id="cartaEnvelope">
+        <div class="carta-flap"   aria-hidden="true"></div>
+        <div class="carta-body">
+          <div class="carta-body-inner" id="cartaBodyInner">
+            <!-- Contenido normal (antes de completar los clics) -->
+            <div id="cartaClosed">
+              <div class="carta-seal" aria-hidden="true">💌</div>
+              <h2 class="carta-title" id="cartaTitle"></h2>
+              <p  class="carta-sub"   id="cartaSub"></p>
+              <!-- Anillo de progreso SVG -->
+              <div class="carta-ring-wrap" aria-hidden="true">
+                <svg class="carta-ring-svg" viewBox="0 0 120 120">
+                  <circle class="ring-bg"  cx="60" cy="60" r="52"/>
+                  <circle class="ring-fg"  cx="60" cy="60" r="52" id="ringFg"/>
+                </svg>
+                <div class="ring-center">
+                  <span class="ring-count" id="ringCount">0</span>
+                  <span class="ring-total" id="ringTotal"></span>
+                </div>
+              </div>
+              <p class="carta-hito" id="cartaHito" role="status"></p>
+            </div>
+            <!-- Contenido al abrirse -->
+            <div id="cartaAbierta" class="hidden">
+              <div class="carta-open-deco" aria-hidden="true">✨ 💗 ✨</div>
+              <p  class="carta-open-msg"  id="cartaOpenMsg"></p>
+              <div class="carta-btns">
+                <button class="btn-si" id="btnSi"></button>
+                <button class="btn-no" id="btnNo"></button>
+              </div>
+            </div>
           </div>
         </div>
-        <p class="carta-hito-msg" id="cartaHitoMsg" role="status"></p>
-      </div>
-      <!-- Contenido abierto (cuando se completan los clics) -->
-      <div class="carta-open-content hidden" id="cartaOpenContent">
-        <div class="carta-open-deco" aria-hidden="true">✨ 💗 ✨</div>
-        <p class="carta-open-mensaje" id="cartaOpenMensaje"></p>
-        <div class="carta-open-btns">
-          <button class="carta-btn-si" id="cartaBtnSi">💗 Sí, quiero abrirla</button>
-          <button class="carta-btn-no" id="cartaBtnNo">Espera un momento...</button>
-        </div>
       </div>
     </div>
   </div>
 
-</div>
+</div><!-- /entryScreen -->
 
-<!-- ══════════════════════════════════════════════════════
+<!-- ══════════════════════════════════════════════════
      FASE 2 — LIBRO VIRTUAL
-════════════════════════════════════════════════════════ -->
+════════════════════════════════════════════════════ -->
 <div id="bookScreen" class="book-screen hidden">
 
-  <!-- Reproductor de música -->
-  <div class="player-wrap" id="playerWrap">
+  <!-- Reproductor flotante -->
+  <div class="player" id="player">
     <button class="player-toggle" id="playerToggle" aria-label="Música">🎵</button>
-    <div class="player-panel" id="playerPanel">
+    <div class="player-body" id="playerBody">
       <div class="player-disc" id="playerDisc" aria-hidden="true">♪</div>
       <div class="player-name" id="playerName">Cargando...</div>
       <div class="player-prog-row">
-        <span class="player-time" id="playerCur">0:00</span>
+        <span class="player-t" id="playerCur">0:00</span>
         <div class="player-track" id="playerTrack">
           <div class="player-fill" id="playerFill"></div>
-          <div class="player-thumb" id="playerThumb"></div>
+          <div class="player-knob" id="playerKnob"></div>
         </div>
-        <span class="player-time" id="playerTot">0:00</span>
+        <span class="player-t" id="playerTot">0:00</span>
       </div>
-      <div class="player-controls">
-        <button class="player-btn" id="playerPrev" aria-label="Anterior">⏮</button>
-        <button class="player-btn player-play" id="playerPlay" aria-label="Play/Pausa">▶</button>
-        <button class="player-btn" id="playerNext" aria-label="Siguiente">⏭</button>
+      <div class="player-ctrl">
+        <button class="pcb" id="pcPrev" aria-label="Anterior">⏮</button>
+        <button class="pcb pcb-play" id="pcPlay" aria-label="Play">▶</button>
+        <button class="pcb" id="pcNext" aria-label="Siguiente">⏭</button>
       </div>
       <div class="player-vol-row">
         <span aria-hidden="true">🔈</span>
@@ -134,82 +138,87 @@
       </div>
     </div>
   </div>
-  <audio id="bookAudio"></audio>
+  <audio id="audio"></audio>
 
-  <!-- Escenario del libro -->
+  <!-- Escenario 3D del libro -->
   <div class="book-stage" id="bookStage">
 
-    <!-- LIBRO -->
     <div class="book" id="book">
 
-      <!-- LOMO central (siempre visible cuando el libro está abierto) -->
-      <div class="book-spine" id="bookSpine" aria-hidden="true"></div>
+      <!-- Lomo visible cuando el libro está abierto -->
+      <div class="book-spine" id="spine" aria-hidden="true"></div>
 
-      <!-- PÁGINA IZQUIERDA -->
-      <div class="book-page page-left" id="pageLeft">
-        <div class="page-face page-face-front" id="pageLeftContent">
-          <!-- contenido inyectado por JS -->
+      <!-- ── PÁGINA IZQUIERDA ── -->
+      <div class="page page-L" id="pageL">
+        <div class="page-face face-front" id="pageLFront">
+          <!-- JS inyecta contenido aquí -->
         </div>
-        <!-- Cara de vuelta (cuando la página gira) -->
-        <div class="page-face page-face-back" id="pageLeftBack" aria-hidden="true"></div>
-      </div>
-
-      <!-- PÁGINA DERECHA (con efecto de volteo 3D) -->
-      <div class="book-page page-right" id="pageRight">
-        <div class="book-page-inner" id="pageRightInner">
-          <div class="page-face page-face-front" id="pageRightContent">
-            <!-- contenido inyectado por JS -->
-          </div>
-          <div class="page-face page-face-back" id="pageRightBack" aria-hidden="true">
-            <!-- contenido de la siguiente vista (pre-renderizado para el volteo) -->
-          </div>
+        <div class="page-face face-back" id="pageLBack" aria-hidden="true">
+          <!-- cara trasera para volteo -->
         </div>
       </div>
 
-      <!-- PORTADA CERRADA (visible cuando el libro está cerrado) -->
-      <div class="book-cover cover-front" id="coverFront">
+      <!-- ── PÁGINA DERECHA (con volteo 3D real) ── -->
+      <div class="page page-R" id="pageR">
+        <!-- Este inner se rota para el volteo -->
+        <div class="page-R-inner" id="pageRInner">
+          <div class="page-face face-front" id="pageRFront">
+            <!-- JS inyecta contenido aquí -->
+          </div>
+          <!-- Cara de vuelta: muestra la página siguiente al voltear -->
+          <div class="page-face face-back" id="pageRBack" aria-hidden="true">
+          </div>
+          <!-- Sombra dinámica de curvatura (se anima con JS) -->
+          <div class="flip-shadow" id="flipShadow" aria-hidden="true"></div>
+          <!-- Brillo de curvatura (highlight en la curva del papel) -->
+          <div class="flip-shine"  id="flipShine"  aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <!-- ── PORTADA CERRADA (visible cuando libro está cerrado mostrando frente) ── -->
+      <div class="cover cover-front" id="coverFront">
         <img class="cover-img" id="coverFrontImg" src="assets/portada.webp" alt="Portada" loading="eager">
         <div class="cover-overlay">
-          <div class="cover-ornament" aria-hidden="true">❤️</div>
-          <h2 class="cover-title" id="coverTitle">Nuestra Historia</h2>
-          <p class="cover-subtitle" id="coverSubtitle">May &amp; Liam</p>
-          <div class="cover-frame" aria-hidden="true"></div>
+          <span class="cover-heart" aria-hidden="true">❤️</span>
+          <h2 class="cover-title"    id="coverTitle"></h2>
+          <p  class="cover-subtitle" id="coverSubtitle"></p>
+          <div class="cover-frame"   aria-hidden="true"></div>
         </div>
-        <div class="cover-open-hint" id="coverOpenHint">Toca la portada para abrir el libro 💗</div>
+        <p class="cover-hint" id="coverHint">Toca la portada para abrir el libro 💗</p>
       </div>
 
-      <!-- CONTRAPORTADA (visible cuando el libro está cerrado tras cerrarse) -->
-      <div class="book-cover cover-back" id="coverBack" aria-hidden="true">
+      <!-- ── CONTRAPORTADA (visible cuando libro está cerrado mostrando dorso) ── -->
+      <div class="cover cover-back hidden" id="coverBack">
         <img class="cover-img" id="coverBackImg" src="assets/contraportada.webp" alt="Contraportada" loading="lazy">
-        <div class="cover-overlay cover-back-overlay">
+        <div class="cover-overlay cover-overlay-back">
           <p class="cover-back-text" id="coverBackText"></p>
-          <p class="cover-back-sub" id="coverBackSub"></p>
+          <p class="cover-back-sub"  id="coverBackSub"></p>
         </div>
       </div>
 
     </div><!-- /book -->
 
     <!-- Sombra del libro en el suelo -->
-    <div class="book-shadow" id="bookShadow" aria-hidden="true"></div>
+    <div class="book-ground-shadow" id="groundShadow" aria-hidden="true"></div>
 
   </div><!-- /book-stage -->
 
-  <!-- Controles de navegación del libro -->
+  <!-- Controles de navegación -->
   <nav class="book-nav" id="bookNav" aria-label="Navegación del libro">
-    <button class="nav-btn btn-prev" id="btnPrev" aria-label="Página anterior">‹</button>
-    <div class="nav-center">
-      <div class="nav-progress-bar" aria-hidden="true">
-        <div class="nav-progress-fill" id="navProgressFill"></div>
+    <button class="nav-btn" id="btnPrev" aria-label="Página anterior">‹</button>
+    <div class="nav-mid">
+      <div class="nav-prog-track" aria-hidden="true">
+        <div class="nav-prog-fill" id="navFill"></div>
       </div>
-      <span class="nav-label" id="navLabel" aria-live="polite">Página 1</span>
+      <span class="nav-label" id="navLabel" aria-live="polite"></span>
     </div>
-    <button class="nav-btn btn-next" id="btnNext" aria-label="Página siguiente">›</button>
+    <button class="nav-btn" id="btnNext" aria-label="Página siguiente">›</button>
   </nav>
 
   <!-- Botones auxiliares -->
-  <div class="book-actions" id="bookActions">
-    <button class="action-btn btn-close" id="btnClose" aria-label="Cerrar libro">✕ Cerrar</button>
-    <button class="action-btn btn-restore" id="btnRestore" aria-label="Volver al inicio">↺ Inicio</button>
+  <div class="book-aux" id="bookAux">
+    <button class="aux-btn" id="btnClose"   aria-label="Cerrar libro">✕ Cerrar</button>
+    <button class="aux-btn" id="btnRestore" aria-label="Ir al inicio">↺ Inicio</button>
   </div>
 
 </div><!-- /bookScreen -->
