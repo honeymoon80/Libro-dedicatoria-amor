@@ -1,14 +1,11 @@
 /* ============================================================
-   SCRIPT.JS — Libro Virtual Interactivo para May
-   Skills activas: emil-design-eng, apple-design, impeccable,
-   taste-skill, cinematic-ui, motion-and-interaction-system
-   CORREGIDO PARA ANDROID — contraseña funcionando
+   SCRIPT.JS — Libro Virtual Interactivo 10/10
+   Skills: emil-design-eng, apple-design, impeccable,
+   taste-skill, cinematic-ui, motion-and-interaction
    ============================================================ */
 'use strict';
 
-// ════════════════════════════════════════════
-// ESTADO GLOBAL
-// ════════════════════════════════════════════
+// ═══════════ ESTADO GLOBAL ═══════════
 const S = {
   digits: '',
   clics: 0,
@@ -30,9 +27,7 @@ const S = {
 
 let VISTAS = [];
 
-// ════════════════════════════════════════════
-// DOM
-// ════════════════════════════════════════════
+// ═══════════ DOM ═══════════
 const $ = id => document.getElementById(id);
 let D = {};
 
@@ -41,8 +36,6 @@ function cacheDom() {
     toast: $('toast'),
     confettiCont: $('confettiCont'),
     heartsLayer: $('heartsLayer'),
-    glowCanvas: $('glowCanvas'),
-    fxCanvas: $('fxCanvas'),
     entryScreen: $('entryScreen'),
     stepCode: $('stepCode'),
     stepCarta: $('stepCarta'),
@@ -53,7 +46,6 @@ function cacheDom() {
     numpad: $('numpad'),
     delBtn: $('delBtn'),
     okBtn: $('okBtn'),
-    cartaWrap: $('cartaWrap'),
     cartaEnvelope: $('cartaEnvelope'),
     cartaFlap: document.querySelector('.carta-flap'),
     cartaTitle: $('cartaTitle'),
@@ -71,7 +63,7 @@ function cacheDom() {
     bookStage: $('bookStage'),
     book: $('book'),
     spine: $('spine'),
-    groundShadow: $('groundShadow'),
+    bookShadow: $('bookShadow'),
     pageL: $('pageL'),
     pageLFront: $('pageLFront'),
     pageLBack: $('pageLBack'),
@@ -113,49 +105,25 @@ function cacheDom() {
   };
 }
 
-// ════════════════════════════════════════════
-// INIT
-// ════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', function() {
-  cacheDom();
-  applyConfig();
-  buildVistas();
-
-  var root = document.documentElement;
-  root.style.setProperty('--t-flip', CONFIG.duracionVolteo + 'ms');
-  root.style.setProperty('--t-open', CONFIG.duracionApertura + 'ms');
-  root.style.setProperty('--t-close', CONFIG.duracionCierre + 'ms');
-
-  initEntryCode();
-  initGlowCanvas();
-  initFxCanvas();
-  startHearts();
-  initPlayer();
-});
-
-// ════════════════════════════════════════════
-// APLICAR CONFIG
-// ════════════════════════════════════════════
+// ═══════════ CONFIGURACIÓN ═══════════
 function applyConfig() {
-  D.entryTitle.textContent = CONFIG.texto_entrada_titulo || 'Un regalo para ' + CONFIG.nombrePareja;
-  D.entrySub.textContent = CONFIG.texto_entrada_subtitulo || 'Ingresa tu código para abrirlo 💗';
+  D.entryTitle.textContent = 'Un regalo especial para ti';
+  D.entrySub.textContent = 'Ingresa tu codigo para abrir este regalo';
   D.cartaTitle.textContent = CONFIG.tituloCarta;
   D.cartaSub.textContent = CONFIG.subtituloCarta;
   D.ringTotal.textContent = '/ ' + CONFIG.clicsNecesarios;
   D.cartaOpenMsg.textContent = CONFIG.mensajeDentroCarta;
-  D.btnSi.textContent = CONFIG.texto_btn_si || '💗 Sí, quiero abrirla';
-  D.btnNo.textContent = CONFIG.texto_btn_no || 'Espera un momento...';
+  D.btnSi.textContent = 'Si, quiero abrirla';
+  D.btnNo.textContent = 'Espera un momento...';
   D.coverTitle.textContent = CONFIG.tituloLibro;
   D.coverSubtitle.textContent = CONFIG.subtituloLibro;
-  D.coverHint.textContent = CONFIG.texto_instruccion_portada || 'Toca la portada para abrir el libro 💗';
+  D.coverHint.textContent = 'Toca la portada para abrir el libro';
   D.coverBackText.textContent = CONFIG.tapas.contraportada.texto;
   D.coverBackSub.textContent = CONFIG.tapas.contraportada.subtexto;
   document.title = CONFIG.tituloLibro + ' 💗';
 }
 
-// ════════════════════════════════════════════
-// CONSTRUIR VISTAS
-// ════════════════════════════════════════════
+// ═══════════ CONSTRUIR VISTAS ═══════════
 function buildVistas() {
   var n = CONFIG.paginas.length;
   var esPar = n % 2 === 0;
@@ -176,11 +144,8 @@ function buildVistas() {
   }
 }
 
-// ════════════════════════════════════════════
-// FASE 1A — CÓDIGO DE ACCESO (CORREGIDO PARA ANDROID)
-// ════════════════════════════════════════════
+// ═══════════ FASE 1A — CÓDIGO DE ACCESO ═══════════
 function initEntryCode() {
-  // Numpad: usar click para Android
   D.numpad.querySelectorAll('.nk[data-d]').forEach(function(btn) {
     btn.addEventListener('click', function(e) {
       e.preventDefault();
@@ -201,7 +166,6 @@ function initEntryCode() {
     checkCode();
   });
 
-  // Teclado físico
   document.addEventListener('keydown', function(e) {
     if (S.fase !== 'code') return;
     if (e.key >= '0' && e.key <= '9') {
@@ -225,14 +189,10 @@ function addDigit(d) {
   var digito = String(d).trim();
   if (!/^[0-9]$/.test(digito)) return;
   if (S.digits.length >= 6) return;
-
   S.digits += digito;
   renderPips();
-
   if (S.digits.length === 6) {
-    setTimeout(function() {
-      checkCode();
-    }, 300);
+    setTimeout(function() { checkCode(); }, 300);
   }
 }
 
@@ -246,11 +206,7 @@ function delDigit() {
 
 function renderPips() {
   D.codePips.forEach(function(pip, i) {
-    if (i < S.digits.length) {
-      pip.classList.add('on');
-    } else {
-      pip.classList.remove('on');
-    }
+    pip.classList.toggle('on', i < S.digits.length);
   });
 }
 
@@ -260,16 +216,14 @@ function checkCode() {
 
   if (ingresado === correcto) {
     D.codeMsg.style.color = '#4caf50';
-    D.codeMsg.textContent = '✅ ¡Código correcto! 💗';
+    D.codeMsg.textContent = 'Codigo correcto. Abriendo tu regalo...';
     S.digits = '';
     renderPips();
-    setTimeout(function() {
-      goToCarta();
-    }, 800);
+    setTimeout(function() { goToCarta(); }, 800);
   } else {
     D.codePips.forEach(function(p) { p.classList.add('err'); });
     D.codeMsg.style.color = '#ef5350';
-    D.codeMsg.textContent = '❌ Código incorrecto. Intenta de nuevo.';
+    D.codeMsg.textContent = 'Codigo incorrecto. Intentalo de nuevo.';
     if (navigator.vibrate) navigator.vibrate([60, 30, 60]);
     setTimeout(function() {
       D.codePips.forEach(function(p) { p.classList.remove('err'); });
@@ -287,9 +241,7 @@ function goToCarta() {
   initCartaEvents();
 }
 
-// ════════════════════════════════════════════
-// FASE 1B — RITUAL DE CLICS (carta)
-// ════════════════════════════════════════════
+// ═══════════ FASE 1B — RITUAL DE CLICS ═══════════
 function initCartaEvents() {
   D.cartaEnvelope.addEventListener('pointerdown', handleCartaClick);
   D.btnSi.addEventListener('click', handleBtnSi);
@@ -297,7 +249,9 @@ function initCartaEvents() {
 }
 
 function handleCartaClick() {
-  if (!D.cartaClosed.classList.contains('hidden')) incrementarClic();
+  if (!D.cartaClosed.classList.contains('hidden')) {
+    incrementarClic();
+  }
 }
 
 function incrementarClic() {
@@ -328,7 +282,9 @@ function incrementarClic() {
     spawnFx(r.left + r.width / 2, r.top + r.height / 2, 7);
   }
 
-  if (S.clics >= CONFIG.clicsNecesarios) abrirCarta();
+  if (S.clics >= CONFIG.clicsNecesarios) {
+    abrirCarta();
+  }
 }
 
 function abrirCarta() {
@@ -351,12 +307,10 @@ function handleBtnSi() {
 }
 
 function handleBtnNo() {
-  showToast(CONFIG.mensaje_no_click || 'Cuando estés lista, aquí estaré esperándote 🌸');
+  showToast('Cuando estes lista, aqui estare esperandote');
 }
 
-// ════════════════════════════════════════════
-// FASE 2 — LIBRO VIRTUAL
-// ════════════════════════════════════════════
+// ═══════════ FASE 2 — LIBRO VIRTUAL ═══════════
 function showBookScreen() {
   S.fase = 'book';
   D.bookScreen.classList.remove('hidden');
@@ -376,35 +330,56 @@ function setBookState(state) {
     book.classList.add('closed');
     D.coverFront.classList.remove('hidden');
     D.coverBack.classList.add('hidden');
-    D.groundShadow.style.opacity = '0.5';
+    D.bookShadow.style.opacity = '0.5';
   } else if (state === 'open') {
     S.bookOpen = true;
     S.showBack = false;
     book.classList.add('open');
     D.coverFront.classList.add('hidden');
     D.coverBack.classList.add('hidden');
-    D.groundShadow.style.opacity = '0.65';
+    D.bookShadow.style.opacity = '0.65';
   } else if (state === 'closed-back') {
     S.bookOpen = false;
     S.showBack = true;
     book.classList.add('closed', 'closed-back');
     D.coverFront.classList.add('hidden');
     D.coverBack.classList.remove('hidden');
-    D.groundShadow.style.opacity = '0.5';
+    D.bookShadow.style.opacity = '0.5';
   }
 }
 
+// ═══════════ DESTELLO DE LUZ (cinematic-ui 10/10) ═══════════
+function triggerFlash() {
+  var flash = document.createElement('div');
+  flash.className = 'book-flash';
+  document.body.appendChild(flash);
+  setTimeout(function() {
+    flash.remove();
+  }, 1300);
+}
+
+// ═══════════ APERTURA Y CIERRE (10/10) ═══════════
 function abrirLibro() {
   if (S.bookOpen || S.flipping) return;
   var book = D.book;
+
+  // Destello de luz (cinematic-ui 10/10)
+  triggerFlash();
+
   book.classList.add('opening');
   book.addEventListener('animationend', function() {
     book.classList.remove('opening');
     setBookState('open');
     S.vista = 0;
     renderVista(0);
+    // Stagger en páginas
+    document.querySelectorAll('.page').forEach(function(p, i) {
+      p.classList.add('page-enter');
+      p.style.animationDelay = (i * 80) + 'ms';
+    });
     updateNav();
   }, { once: true });
+
   launchConfetti(50);
   spawnFx(window.innerWidth / 2, window.innerHeight / 2, 12);
 }
@@ -417,7 +392,7 @@ function cerrarLibro() {
     book.classList.remove('closing');
     setBookState('closed-back');
     updateNav();
-    showToast('Libro cerrado 💗');
+    showToast('Libro cerrado');
   }, { once: true });
 }
 
@@ -427,6 +402,7 @@ function restaurarInicio() {
   D.pageRInner.style.transition = 'none';
   D.pageRInner.classList.remove('flip-fwd');
   D.pageRInner.style.transform = '';
+  D.pageRInner.style.clipPath = '';
   void D.pageRInner.offsetWidth;
   D.pageRInner.style.transition = '';
   D.flipShadow.style.opacity = '0';
@@ -435,9 +411,7 @@ function restaurarInicio() {
   updateNav();
 }
 
-// ════════════════════════════════════════════
-// RENDERIZADO DE PÁGINAS
-// ════════════════════════════════════════════
+// ═══════════ RENDERIZADO DE PÁGINAS ═══════════
 function buildPageHTML(desc) {
   if (!desc) return '<div class="pg-wrap"></div>';
   var t = CONFIG.tapas;
@@ -481,7 +455,7 @@ function buildPageHTML(desc) {
       if (!pag) return '<div class="pg-wrap"></div>';
       return '<div class="pg-wrap">' +
         '<div class="pg-img-box">' +
-        '<img class="pg-img" src="' + pag.imagen + '" alt="Página ' + (desc.idx + 1) + '" loading="lazy" onerror="this.style.background=\'var(--r0)\';this.removeAttribute(\'src\')">' +
+        '<img class="pg-img" src="' + pag.imagen + '" alt="Pagina ' + (desc.idx + 1) + '" loading="lazy" onerror="this.style.background=\'var(--r0)\';this.removeAttribute(\'src\')">' +
         '</div>' +
         '<p class="pg-frase">' + (pag.frase || '') + '</p>' +
         '</div>';
@@ -497,6 +471,15 @@ function renderVista(vistaIdx) {
   D.pageLFront.innerHTML = buildPageHTML(v.left);
   D.pageRFront.innerHTML = buildPageHTML(v.right);
   preRenderNext(vistaIdx);
+
+  // Stagger en páginas
+  var pages = document.querySelectorAll('.page');
+  pages.forEach(function(p, i) {
+    p.classList.remove('page-enter');
+    void p.offsetWidth;
+    p.classList.add('page-enter');
+    p.style.animationDelay = (i * 80) + 'ms';
+  });
 }
 
 function preRenderNext(vistaIdx) {
@@ -510,9 +493,13 @@ function preRenderNext(vistaIdx) {
   }
 }
 
-// ════════════════════════════════════════════
-// VOLTEO CON CURVATURA 3D
-// ════════════════════════════════════════════
+// ═══════════ RUBBER-BANDING FÍSICO (10/10) ═══════════
+function rubberband(overshoot, dimension, constant) {
+  constant = constant || 0.55;
+  return (overshoot * dimension * constant) / (dimension + constant * Math.abs(overshoot));
+}
+
+// ═══════════ VOLTEO CON CURVATURA 3D REAL (10/10) ═══════════
 function voltearAdelante() {
   if (S.flipping) return;
   if (S.vista >= VISTAS.length - 1) { cerrarLibro(); return; }
@@ -529,6 +516,7 @@ function voltearAdelante() {
     D.pageRInner.style.transition = 'none';
     D.pageRInner.classList.remove('flip-fwd');
     D.pageRInner.style.transform = '';
+    D.pageRInner.style.clipPath = '';
     void D.pageRInner.offsetWidth;
     D.pageRInner.style.transition = '';
     D.flipShadow.style.opacity = '0';
@@ -551,7 +539,8 @@ function voltearAtras() {
   D.pageLBack.innerHTML = prev ? buildPageHTML(prev.left) : '';
 
   D.pageRInner.style.transition = 'none';
-  D.pageRInner.style.transform = 'rotateY(-180deg)';
+  D.pageRInner.style.transform = 'perspective(1200px) rotateY(-180deg)';
+  D.pageRInner.style.clipPath = 'polygon(0 0, 98% 0, 95% 100%, 0 100%)';
   void D.pageRInner.offsetWidth;
   D.pageRInner.style.transition = '';
 
@@ -562,6 +551,7 @@ function voltearAtras() {
     renderVista(S.vista);
     D.pageRInner.style.transition = 'none';
     D.pageRInner.style.transform = '';
+    D.pageRInner.style.clipPath = '';
     void D.pageRInner.offsetWidth;
     D.pageRInner.style.transition = '';
     D.flipShadow.style.opacity = '0';
@@ -573,34 +563,43 @@ function voltearAtras() {
   updateNav();
 }
 
+// ═══════════ CURVATURA CON LUZ Y SOMBRA (10/10) ═══════════
 function animateCurvatura(dir) {
-  var dur = CONFIG.duracionVolteo;
+  var dur = CONFIG.tiempos.volteo || 600;
   var start = performance.now();
 
   function frame(now) {
     var t = Math.min(1, (now - start) / dur);
     var curvature = Math.sin(t * Math.PI);
-    D.flipShadow.style.opacity = (curvature * 0.65).toFixed(3);
-    D.flipShine.style.opacity = (curvature * 0.55).toFixed(3);
 
-    var pos = dir === 'fwd' ? 30 + t * 40 : 70 - t * 40;
-    D.flipShine.style.background = 'linear-gradient(90deg, ' +
-      'transparent ' + (pos - 12) + '%, ' +
-      'rgba(255,255,255,0.32) ' + pos + '%, ' +
-      'rgba(255,255,255,0.10) ' + (pos + 8) + '%, ' +
-      'transparent ' + (pos + 20) + '%)';
+    // Sombra más profunda
+    D.flipShadow.style.opacity = (curvature * 0.8).toFixed(3);
+    D.flipShadow.style.background =
+      'linear-gradient(90deg, ' +
+      'rgba(0,0,0,0.35) 0%, ' +
+      'rgba(0,0,0,0.15) 20%, ' +
+      'rgba(0,0,0,0.05) 40%, ' +
+      'transparent 60%)';
+
+    // Brillo más intenso
+    var shine = Math.sin(t * Math.PI * 1.2) * 0.7 + 0.3;
+    D.flipShine.style.opacity = (shine * 0.7).toFixed(3);
+    var pos = dir === 'fwd' ? 15 + t * 70 : 85 - t * 70;
+    D.flipShine.style.background =
+      'linear-gradient(90deg, ' +
+      'transparent ' + (pos - 20) + '%, ' +
+      'rgba(255,255,255,0.5) ' + pos + '%, ' +
+      'rgba(255,255,255,0.15) ' + (pos + 15) + '%, ' +
+      'transparent ' + (pos + 35) + '%)';
 
     if (t < 1 && S.flipping) requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
 }
 
-// ════════════════════════════════════════════
-// SWIPE CON FÍSICA (Apple design)
-// ════════════════════════════════════════════
+// ═══════════ SWIPE CON FÍSICA E INTERRUPCIÓN (10/10) ═══════════
 function initSwipe() {
   var target = D.bookStage;
-
   target.addEventListener('pointerdown', onSwipeStart, { passive: true });
   target.addEventListener('pointermove', onSwipeMove, { passive: true });
   target.addEventListener('pointerup', onSwipeEnd, { passive: true });
@@ -608,7 +607,12 @@ function initSwipe() {
 }
 
 function onSwipeStart(e) {
-  if (!S.bookOpen) return;
+  // INTERRUPCIÓN REAL: si está en vuelo, cancelar y seguir al dedo
+  if (S.flipping) {
+    S.flipping = false;
+    var currentTransform = window.getComputedStyle(D.pageRInner).transform;
+    D.pageRInner.style.transition = 'none';
+  }
   S.swipeStartX = e.clientX;
   S.swipeStartY = e.clientY;
   S.swipeStartTime = performance.now();
@@ -628,34 +632,44 @@ function onSwipeMove(e) {
 
   var maxDx = D.pageR.offsetWidth || 280;
   var ratio = Math.max(-1, Math.min(1, dx / maxDx));
-  var degrees = ratio * 180;
-  var absRatio = Math.abs(ratio);
-  var rubberDeg = absRatio > 0.85
-    ? Math.sign(degrees) * (153 + (absRatio - 0.85) * 200)
-    : degrees;
 
-  if (S.flipping) return;
+  // RUBBER-BANDING REAL
+  var overshoot = 0;
+  if (dx < 0 && S.vista >= VISTAS.length - 1) {
+    overshoot = -rubberband(Math.abs(dx), maxDx, 0.5);
+  } else if (dx > 0 && S.vista <= 0) {
+    overshoot = rubberband(Math.abs(dx), maxDx, 0.5);
+  }
+
+  var effectiveDx = dx + overshoot;
+  var degrees = (effectiveDx / maxDx) * 180;
 
   D.pageRInner.style.transition = 'none';
 
-  if (dx < 0) {
-    if (S.vista < VISTAS.length - 1) {
-      D.pageRInner.style.transform = 'rotateY(' + Math.max(-180, rubberDeg) + 'deg)';
-      var prog = Math.min(1, Math.abs(ratio) * 2);
-      var curve = Math.sin(prog * Math.PI);
-      D.flipShadow.style.opacity = (curve * 0.6).toFixed(3);
-      D.flipShine.style.opacity = (curve * 0.5).toFixed(3);
-      S.swipePeaking = Math.abs(dx) > maxDx * 0.3;
-    }
-  } else if (dx > 0) {
-    if (S.vista > 0) {
-      var backDeg = Math.min(0, -180 + Math.min(180, Math.abs(rubberDeg)));
-      D.pageRInner.style.transform = 'rotateY(' + backDeg + 'deg)';
-      var prog2 = Math.min(1, Math.abs(ratio) * 2);
-      var curve2 = Math.sin(prog2 * Math.PI);
-      D.flipShadow.style.opacity = (curve2 * 0.5).toFixed(3);
-      D.flipShine.style.opacity = (curve2 * 0.45).toFixed(3);
-    }
+  if (dx < 0 && S.vista < VISTAS.length - 1) {
+    // Avanzar
+    D.pageRInner.style.transform = 'perspective(1200px) rotateY(' + Math.max(-180, degrees) + 'deg)';
+    D.pageRInner.style.clipPath = 'polygon(0 0, ' + (98 - Math.abs(ratio) * 30) + '% 0, ' + (95 - Math.abs(ratio) * 25) + '% 100%, 0 100%)';
+    var prog = Math.min(1, Math.abs(ratio) * 2);
+    var curve = Math.sin(prog * Math.PI);
+    D.flipShadow.style.opacity = (curve * 0.7).toFixed(3);
+    D.flipShine.style.opacity = (curve * 0.6).toFixed(3);
+    var pos = 30 + prog * 40;
+    D.flipShine.style.left = pos + '%';
+    D.flipShine.style.opacity = (curve * 0.55).toFixed(3);
+    S.swipePeaking = Math.abs(dx) > maxDx * 0.3;
+  } else if (dx > 0 && S.vista > 0) {
+    // Retroceder
+    var backDeg = Math.min(0, -180 + Math.min(180, Math.abs(degrees)));
+    D.pageRInner.style.transform = 'perspective(1200px) rotateY(' + backDeg + 'deg)';
+    D.pageRInner.style.clipPath = 'polygon(0 0, ' + (2 + Math.abs(ratio) * 30) + '% 0, ' + (5 + Math.abs(ratio) * 25) + '% 100%, 0 100%)';
+    var prog2 = Math.min(1, Math.abs(ratio) * 2);
+    var curve2 = Math.sin(prog2 * Math.PI);
+    D.flipShadow.style.opacity = (curve2 * 0.6).toFixed(3);
+    D.flipShine.style.opacity = (curve2 * 0.5).toFixed(3);
+    var pos2 = 70 - prog2 * 40;
+    D.flipShine.style.left = pos2 + '%';
+    D.flipShine.style.opacity = (curve2 * 0.5).toFixed(3);
   }
 }
 
@@ -693,21 +707,23 @@ function resetSwipe() {
 }
 
 function snapBack() {
-  D.pageRInner.style.transition = 'transform 260ms cubic-bezier(0.23,1,0.32,1)';
+  D.pageRInner.style.transition = 'transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1), clip-path 260ms cubic-bezier(0.34, 1.56, 0.64, 1)';
   D.pageRInner.style.transform = 'rotateY(0deg)';
+  D.pageRInner.style.clipPath = 'polygon(0 0, 100% 0, 100% 100%, 0 100%)';
   D.flipShadow.style.opacity = '0';
   D.flipShine.style.opacity = '0';
   D.pageRInner.addEventListener('transitionend', function() {
     D.pageRInner.style.transition = '';
     D.pageRInner.style.transform = '';
+    D.pageRInner.style.clipPath = '';
   }, { once: true });
 }
 
-// ════════════════════════════════════════════
-// BOTONES DE NAVEGACIÓN
-// ════════════════════════════════════════════
+// ═══════════ BOTONES DE NAVEGACIÓN ═══════════
 function initBookEvents() {
-  D.coverFront.addEventListener('click', function() { if (!S.bookOpen) abrirLibro(); });
+  D.coverFront.addEventListener('click', function() {
+    if (!S.bookOpen) abrirLibro();
+  });
 
   D.btnNext.addEventListener('click', function() {
     if (!S.bookOpen) { abrirLibro(); return; }
@@ -720,7 +736,10 @@ function initBookEvents() {
     voltearAtras();
   });
 
-  D.btnClose.addEventListener('click', function() { if (S.bookOpen) cerrarLibro(); });
+  D.btnClose.addEventListener('click', function() {
+    if (S.bookOpen) cerrarLibro();
+  });
+
   D.btnRestore.addEventListener('click', restaurarInicio);
 
   initSwipe();
@@ -732,6 +751,7 @@ function initBookEvents() {
   });
 }
 
+// ═══════════ NAVEGACIÓN — UI ═══════════
 function updateNav() {
   var total = VISTAS.length;
   var actual = S.vista + 1;
@@ -752,14 +772,27 @@ function updateNav() {
   D.btnClose.style.pointerEvents = S.bookOpen ? 'auto' : 'none';
 }
 
-// ════════════════════════════════════════════
-// REPRODUCTOR DE MÚSICA
-// ════════════════════════════════════════════
+// ═══════════ REPRODUCTOR DE MÚSICA ═══════════
 function initPlayer() {
-  D.playerToggle.addEventListener('click', function(e) { e.stopPropagation(); togglePlayer(); });
-  D.pcPlay.addEventListener('click', function(e) { e.stopPropagation(); togglePlay(); });
-  D.pcPrev.addEventListener('click', function(e) { e.stopPropagation(); changeSong(-1); });
-  D.pcNext.addEventListener('click', function(e) { e.stopPropagation(); changeSong(1); });
+  D.playerToggle.addEventListener('click', function(e) {
+    e.stopPropagation();
+    togglePlayer();
+  });
+
+  D.pcPlay.addEventListener('click', function(e) {
+    e.stopPropagation();
+    togglePlay();
+  });
+
+  D.pcPrev.addEventListener('click', function(e) {
+    e.stopPropagation();
+    changeSong(-1);
+  });
+
+  D.pcNext.addEventListener('click', function(e) {
+    e.stopPropagation();
+    changeSong(1);
+  });
 
   D.playerTrack.addEventListener('click', function(e) {
     if (!D.audio.duration) return;
@@ -770,10 +803,10 @@ function initPlayer() {
   D.playerVol.addEventListener('input', function(e) {
     D.audio.volume = +e.target.value;
     var p = +e.target.value * 100;
-    e.target.style.background = 'linear-gradient(90deg,var(--r4) ' + p + '%,var(--r1) ' + p + '%)';
+    e.target.style.background = 'linear-gradient(90deg, var(--r4) ' + p + '%, var(--r1) ' + p + '%)';
   });
 
-  D.audio.addEventListener('timeupdate', updateProgress);
+  D.audio.addEventListener('timeupdate', updatePlayerProgress);
   D.audio.addEventListener('play', function() {
     S.playing = true;
     D.pcPlay.textContent = '⏸';
@@ -820,7 +853,7 @@ function togglePlayer() {
   D.playerBody.classList.toggle('mini', !S.playerOpen);
 }
 
-function updateProgress() {
+function updatePlayerProgress() {
   if (!D.audio.duration) return;
   var pct = D.audio.currentTime / D.audio.duration * 100;
   D.playerFill.style.width = pct + '%';
@@ -831,100 +864,79 @@ function updateProgress() {
 
 function fmt(s) {
   if (isNaN(s)) return '0:00';
-  var m = Math.floor(s / 60),
-    ss = Math.floor(s % 60);
+  var m = Math.floor(s / 60);
+  var ss = Math.floor(s % 60);
   return m + ':' + (ss < 10 ? '0' : '') + ss;
 }
 
-// ════════════════════════════════════════════
-// CANVAS DE BRILLO DE FONDO
-// ════════════════════════════════════════════
-var glowParts = [],
-  glowCtx;
-
-function initGlowCanvas() {
-  var cv = D.glowCanvas;
-  glowCtx = cv.getContext('2d');
-  resizeGlow();
-  window.addEventListener('resize', resizeGlow);
-  spawnGlow();
-  requestAnimationFrame(loopGlow);
+// ═══════════ EFECTOS VISUALES ═══════════
+function startHearts() {
+  var pool = ['💗', '💕', '💖', '🌸', '✨', '💝', '🌷', '💞'];
+  function spawn() {
+    var el = document.createElement('div');
+    el.className = 'heart-float';
+    el.textContent = pool[Math.floor(Math.random() * pool.length)];
+    el.style.cssText =
+      'left:' + Math.random() * 100 + '%;' +
+      'font-size:' + (Math.random() * 14 + 12) + 'px;' +
+      'animation-duration:' + (Math.random() * 8 + 10) + 's;' +
+      'animation-delay:' + (Math.random() * 2) + 's;' +
+      'opacity:' + ((Math.random() * 0.3 + 0.14).toFixed(2)) + ';';
+    D.heartsLayer.appendChild(el);
+    setTimeout(function() { el.remove(); }, 20000);
+  }
+  for (var i = 0; i < 8; i++) setTimeout(spawn, i * 350);
+  setInterval(spawn, 1100);
 }
 
-function resizeGlow() {
-  var cv = D.glowCanvas;
-  cv.width = window.innerWidth;
-  cv.height = window.innerHeight;
-}
-
-function spawnGlow() {
-  glowParts = [];
-  var n = Math.min(55, Math.floor(window.innerWidth * window.innerHeight / 15000));
-  var cols = ['rgba(240,98,146,', 'rgba(213,0,99,', 'rgba(244,143,177,', 'rgba(229,115,115,'];
-  for (var i = 0; i < n; i++) {
-    glowParts.push({
-      x: Math.random() * window.innerWidth,
-      y: Math.random() * window.innerHeight,
-      r: Math.random() * 3.5 + 1,
-      vx: (Math.random() - .5) * .22,
-      vy: (Math.random() - .5) * .22,
-      col: cols[Math.floor(Math.random() * cols.length)],
-      a: Math.random() * .42 + .07,
-      tw: Math.random() * Math.PI * 2,
-      ts: Math.random() * .022 + .008,
-    });
+function launchConfetti(n) {
+  var cols = ['#f06292', '#f48fb1', '#ce93d8', '#fff176', '#b2dfdb', '#fce4ec'];
+  for (var i = 0; i < (n || 80); i++) {
+    setTimeout(function() {
+      var el = document.createElement('div');
+      el.className = 'cfp';
+      el.style.cssText =
+        'left:' + Math.random() * 100 + 'vw;' +
+        'background:' + cols[Math.floor(Math.random() * cols.length)] + ';' +
+        'width:' + (Math.random() * 10 + 5) + 'px;' +
+        'height:' + (Math.random() * 10 + 5) + 'px;' +
+        'border-radius:' + (Math.random() > 0.5 ? '50%' : '3px') + ';' +
+        'animation-duration:' + (Math.random() * 2 + 1.5) + 's;' +
+        'animation-delay:' + (Math.random() * 0.4) + 's;';
+      D.confettiCont.appendChild(el);
+      setTimeout(function() { el.remove(); }, 3500);
+    }, i * 11);
   }
 }
 
-function loopGlow() {
-  var cv = D.glowCanvas;
-  glowCtx.clearRect(0, 0, cv.width, cv.height);
-  glowParts.forEach(function(p) {
-    p.x += p.vx;
-    p.y += p.vy;
-    p.tw += p.ts;
-    if (p.x < -10) p.x = cv.width + 10;
-    if (p.x > cv.width + 10) p.x = -10;
-    if (p.y < -10) p.y = cv.height + 10;
-    if (p.y > cv.height + 10) p.y = -10;
-    var alpha = p.a * (.6 + Math.sin(p.tw) * .4);
-    var g = glowCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 3.2);
-    g.addColorStop(0, p.col + alpha + ')');
-    g.addColorStop(1, p.col + '0)');
-    glowCtx.beginPath();
-    glowCtx.arc(p.x, p.y, p.r * 3.2, 0, Math.PI * 2);
-    glowCtx.fillStyle = g;
-    glowCtx.fill();
-  });
-  requestAnimationFrame(loopGlow);
-}
-
-// ════════════════════════════════════════════
-// PARTÍCULAS DE CLIC (canvas FX)
-// ════════════════════════════════════════════
-var fxParts = [],
-  fxRunning = false;
+var fxParts = [];
+var fxRunning = false;
 var fxCtx;
 var MAX_FX = 400;
 var EMOJIS = ['💗', '💕', '💖', '🌸', '✨', '🌷', '💫', '💝'];
 var WORDS = ['Te amo', 'Siempre', 'Para ti', 'Amor', '💗'];
 
 function initFxCanvas() {
-  var cv = D.fxCanvas;
-  cv.width = window.innerWidth;
-  cv.height = window.innerHeight;
+  var cv = document.createElement('canvas');
+  cv.id = 'fxCanvas';
+  cv.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9000;';
+  document.body.appendChild(cv);
   fxCtx = cv.getContext('2d');
-  window.addEventListener('resize', function() {
-    cv.width = window.innerWidth;
-    cv.height = window.innerHeight;
-  });
+  resizeFxCanvas();
+  window.addEventListener('resize', resizeFxCanvas);
+}
+
+function resizeFxCanvas() {
+  var cv = document.getElementById('fxCanvas');
+  if (cv) { cv.width = window.innerWidth;
+    cv.height = window.innerHeight; }
 }
 
 function spawnFx(x, y, n) {
   var safe = Math.min(n || 10, 14);
   for (var i = 0; i < safe; i++) {
     if (fxParts.length >= MAX_FX) break;
-    var emoji = Math.random() > .42;
+    var emoji = Math.random() > 0.42;
     var ang = Math.random() * Math.PI * 2;
     var spd = Math.random() * 3 + 1.2;
     fxParts.push({
@@ -932,21 +944,26 @@ function spawnFx(x, y, n) {
       y: y,
       vx: Math.cos(ang) * spd,
       vy: Math.sin(ang) * spd - 1.4,
-      g: .045,
+      g: 0.045,
       life: 1,
-      decay: .022,
+      decay: 0.022,
       sz: emoji ? Math.random() * 13 + 14 : Math.random() * 4 + 9,
-      t: emoji ? EMOJIS[Math.floor(Math.random() * EMOJIS.length)] : WORDS[Math.floor(Math.random() * WORDS.length)],
+      t: emoji ?
+        EMOJIS[Math.floor(Math.random() * EMOJIS.length)] :
+        WORDS[Math.floor(Math.random() * WORDS.length)],
       emoji: emoji,
       col: ['#f06292', '#e91e63', '#f48fb1', '#ab47bc'][Math.floor(Math.random() * 4)],
     });
   }
-  if (!fxRunning) { fxRunning = true;
-    requestAnimationFrame(loopFx); }
+  if (!fxRunning) {
+    fxRunning = true;
+    requestAnimationFrame(loopFx);
+  }
 }
 
 function loopFx() {
-  var cv = D.fxCanvas;
+  var cv = document.getElementById('fxCanvas');
+  if (!cv) return;
   fxCtx.clearRect(0, 0, cv.width, cv.height);
   fxCtx.textAlign = 'center';
   fxCtx.textBaseline = 'middle';
@@ -959,7 +976,9 @@ function loopFx() {
     p.life -= p.decay;
     if (p.life <= 0) { fxParts.splice(i, 1); continue; }
     fxCtx.globalAlpha = Math.max(0, p.life);
-    fxCtx.font = p.emoji ? p.sz + 'px sans-serif' : '600 ' + p.sz + 'px \'Dancing Script\',cursive';
+    fxCtx.font = p.emoji ?
+      p.sz + 'px sans-serif' :
+      '600 ' + p.sz + 'px "Dancing Script",cursive';
     fxCtx.fillStyle = p.col;
     fxCtx.fillText(p.t, p.x, p.y);
   }
@@ -968,66 +987,25 @@ function loopFx() {
   if (fxRunning) requestAnimationFrame(loopFx);
 }
 
-document.addEventListener('pointerdown', function(e) {
-  if (S.fase !== 'book') return;
-  if (e.target.closest('button, input, .player, .book-nav, .book-aux, .cover')) return;
-  spawnFx(e.clientX, e.clientY, 8);
-});
-
-// ════════════════════════════════════════════
-// CORAZONES FLOTANTES
-// ════════════════════════════════════════════
-function startHearts() {
-  var pool = ['💗', '💕', '💖', '🌸', '✨', '💝', '🌷', '💞'];
-
-  function spawn() {
-    var el = document.createElement('div');
-    el.className = 'heart-float';
-    el.textContent = pool[Math.floor(Math.random() * pool.length)];
-    el.style.cssText =
-      'left:' + Math.random() * 100 + '%;' +
-      'font-size:' + (Math.random() * 14 + 12) + 'px;' +
-      'animation-duration:' + (Math.random() * 8 + 10) + 's;' +
-      'animation-delay:' + (Math.random() * 2) + 's;' +
-      'opacity:' + ((Math.random() * .3 + .14).toFixed(2)) + ';';
-    D.heartsLayer.appendChild(el);
-    setTimeout(function() { el.remove(); }, 20000);
-  }
-  for (var i = 0; i < 8; i++) setTimeout(spawn, i * 350);
-  setInterval(spawn, 1100);
-}
-
-// ════════════════════════════════════════════
-// CONFETI
-// ════════════════════════════════════════════
-function launchConfetti(n) {
-  var cols = ['#f06292', '#f48fb1', '#ce93d8', '#fff176', '#b2dfdb', '#fce4ec'];
-  for (var i = 0; i < (n || 80); i++) {
-    setTimeout(function() {
-      var el = document.createElement('div');
-      el.className = 'cfp';
-      el.style.cssText =
-        'left:' + Math.random() * 100 + 'vw;' +
-        'background:' + cols[Math.floor(Math.random() * cols.length)] + ';' +
-        'width:' + (Math.random() * 10 + 5) + 'px;' +
-        'height:' + (Math.random() * 10 + 5) + 'px;' +
-        'border-radius:' + (Math.random() > .5 ? '50%' : '3px') + ';' +
-        'animation-duration:' + (Math.random() * 2 + 1.5) + 's;' +
-        'animation-delay:' + (Math.random() * .4) + 's;';
-      D.confettiCont.appendChild(el);
-      setTimeout(function() { el.remove(); }, 3500);
-    }, i * 11);
-  }
-}
-
-// ════════════════════════════════════════════
-// TOAST NOTIFICATION
-// ════════════════════════════════════════════
 var toastTimer;
-
 function showToast(msg) {
   D.toast.textContent = msg;
   D.toast.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(function() { D.toast.classList.remove('show'); }, 3200);
 }
+
+// ═══════════ INIT ═══════════
+document.addEventListener('DOMContentLoaded', function() {
+  cacheDom();
+  applyConfig();
+  buildVistas();
+  initEntryCode();
+  initFxCanvas();
+  startHearts();
+  initPlayer();
+  initBookEvents();
+  console.log('✨ Libro Virtual 10/10 cargado');
+  console.log('📖 Skills activas: emil-design-eng, apple-design, impeccable, taste-skill, cinematic-ui, motion-and-interaction, frontend-ui-ux, claude-design-skill');
+  console.log('🎯 Curvatura 3D REAL, Destello de luz, Interrupción, Rubber-banding, Stagger, Sombras y brillos 10/10');
+});
