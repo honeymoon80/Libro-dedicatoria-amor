@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Libro Virtual 💗</title>
+  <title>Libro Virtual</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;600;700&family=Great+Vibes&family=Playfair+Display:ital,wght@0,400;1,400&family=Cormorant+Garamond:ital,wght@0,300;1,400&display=swap" rel="stylesheet">
@@ -11,42 +11,27 @@
 </head>
 <body>
 
-  <!-- ── Capa de corazones siempre presentes ── -->
-  <div id="heartsLayer" aria-hidden="true"></div>
+  <div id="heartsLayer"></div>
+  <div id="confettiCont"></div>
+  <div id="toast" class="toast"></div>
 
-  <!-- ── Canvas de brillo de fondo ── -->
-  <canvas id="glowCanvas" aria-hidden="true"></canvas>
-
-  <!-- ── Canvas de partículas de clic ── -->
-  <canvas id="fxCanvas" aria-hidden="true"></canvas>
-
-  <!-- ── Confeti ── -->
-  <div id="confettiCont" aria-hidden="true"></div>
-
-  <!-- ── Toast notification ── -->
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
-
-  <!-- ══════════════════════════════════════════════════
-  FASE 1 — PANTALLA DE ENTRADA
-  ═════════════════════════════════════════════════════ -->
+  <!-- ═══════════ FASE 1: PANTALLA DE ENTRADA ═══════════ -->
   <div id="entryScreen" class="entry-screen">
 
-    <div class="entry-bg-rings" aria-hidden="true">
-      <span class="ring r1"></span><span class="ring r2"></span><span class="ring r3"></span>
-    </div>
-
-    <!-- PASO 1 — Código de acceso -->
     <div id="stepCode" class="entry-step">
       <div class="entry-card">
-        <div class="entry-ornament" aria-hidden="true">💌</div>
+        <div class="entry-ornament">💌</div>
         <h1 class="entry-title" id="entryTitle"></h1>
         <p class="entry-sub" id="entrySub"></p>
-        <div class="code-display" id="codeDisplay" role="group" aria-label="Código de acceso">
-          <span class="code-pip"></span><span class="code-pip"></span>
-          <span class="code-pip"></span><span class="code-pip"></span>
-          <span class="code-pip"></span><span class="code-pip"></span>
+        <div class="code-display" id="codeDisplay">
+          <span class="code-pip"></span>
+          <span class="code-pip"></span>
+          <span class="code-pip"></span>
+          <span class="code-pip"></span>
+          <span class="code-pip"></span>
+          <span class="code-pip"></span>
         </div>
-        <div class="numpad" id="numpad" role="group" aria-label="Teclado numérico">
+        <div class="numpad" id="numpad">
           <button class="nk" data-d="1">1</button>
           <button class="nk" data-d="2">2</button>
           <button class="nk" data-d="3">3</button>
@@ -56,26 +41,25 @@
           <button class="nk" data-d="7">7</button>
           <button class="nk" data-d="8">8</button>
           <button class="nk" data-d="9">9</button>
-          <button class="nk nk-del" id="delBtn" aria-label="Borrar">⌫</button>
+          <button class="nk nk-del" id="delBtn">⌫</button>
           <button class="nk" data-d="0">0</button>
-          <button class="nk nk-ok" id="okBtn" aria-label="Confirmar">✓</button>
+          <button class="nk nk-ok" id="okBtn">✓</button>
         </div>
-        <p class="code-msg" id="codeMsg" role="alert"></p>
+        <p class="code-msg" id="codeMsg"></p>
       </div>
     </div>
 
-    <!-- PASO 2 — Ritual de clics (la carta) -->
     <div id="stepCarta" class="entry-step hidden">
-      <div class="carta-wrap" id="cartaWrap">
+      <div class="carta-wrap">
         <div class="carta-envelope" id="cartaEnvelope">
-          <div class="carta-flap" aria-hidden="true"></div>
+          <div class="carta-flap"></div>
           <div class="carta-body">
             <div class="carta-body-inner" id="cartaBodyInner">
               <div id="cartaClosed">
-                <div class="carta-seal" aria-hidden="true">💌</div>
+                <div class="carta-seal">💌</div>
                 <h2 class="carta-title" id="cartaTitle"></h2>
                 <p class="carta-sub" id="cartaSub"></p>
-                <div class="carta-ring-wrap" aria-hidden="true">
+                <div class="carta-ring-wrap">
                   <svg class="carta-ring-svg" viewBox="0 0 120 120">
                     <circle class="ring-bg" cx="60" cy="60" r="52" />
                     <circle class="ring-fg" cx="60" cy="60" r="52" id="ringFg" />
@@ -85,10 +69,9 @@
                     <span class="ring-total" id="ringTotal"></span>
                   </div>
                 </div>
-                <p class="carta-hito" id="cartaHito" role="status"></p>
+                <p class="carta-hito" id="cartaHito"></p>
               </div>
               <div id="cartaAbierta" class="hidden">
-                <div class="carta-open-deco" aria-hidden="true">✨ 💗 ✨</div>
                 <p class="carta-open-msg" id="cartaOpenMsg"></p>
                 <div class="carta-btns">
                   <button class="btn-si" id="btnSi"></button>
@@ -101,17 +84,15 @@
       </div>
     </div>
 
-  </div><!-- /entryScreen -->
+  </div>
 
-  <!-- ══════════════════════════════════════════════════
-  FASE 2 — LIBRO VIRTUAL
-  ═════════════════════════════════════════════════════ -->
+  <!-- ═══════════ FASE 2: LIBRO VIRTUAL ═══════════ -->
   <div id="bookScreen" class="book-screen hidden">
 
     <div class="player" id="player">
-      <button class="player-toggle" id="playerToggle" aria-label="Música">🎵</button>
+      <button class="player-toggle" id="playerToggle">🎵</button>
       <div class="player-body" id="playerBody">
-        <div class="player-disc" id="playerDisc" aria-hidden="true">♪</div>
+        <div class="player-disc" id="playerDisc">♪</div>
         <div class="player-name" id="playerName">Cargando...</div>
         <div class="player-prog-row">
           <span class="player-t" id="playerCur">0:00</span>
@@ -122,14 +103,14 @@
           <span class="player-t" id="playerTot">0:00</span>
         </div>
         <div class="player-ctrl">
-          <button class="pcb" id="pcPrev" aria-label="Anterior">⏮</button>
-          <button class="pcb pcb-play" id="pcPlay" aria-label="Play">▶</button>
-          <button class="pcb" id="pcNext" aria-label="Siguiente">⏭</button>
+          <button class="pcb" id="pcPrev">⏮</button>
+          <button class="pcb pcb-play" id="pcPlay">▶</button>
+          <button class="pcb" id="pcNext">⏭</button>
         </div>
         <div class="player-vol-row">
-          <span aria-hidden="true">🔈</span>
-          <input type="range" id="playerVol" class="player-vol" min="0" max="1" step="0.01" value="0.7" aria-label="Volumen">
-          <span aria-hidden="true">🔊</span>
+          <span>🔈</span>
+          <input type="range" id="playerVol" class="player-vol" min="0" max="1" step="0.01" value="0.7">
+          <span>🔊</span>
         </div>
       </div>
     </div>
@@ -139,64 +120,64 @@
 
       <div class="book" id="book">
 
-        <div class="book-spine" id="spine" aria-hidden="true"></div>
+        <div class="book-spine" id="spine"></div>
 
         <div class="page page-L" id="pageL">
           <div class="page-face face-front" id="pageLFront"></div>
-          <div class="page-face face-back" id="pageLBack" aria-hidden="true"></div>
+          <div class="page-face face-back" id="pageLBack"></div>
         </div>
 
         <div class="page page-R" id="pageR">
           <div class="page-R-inner" id="pageRInner">
             <div class="page-face face-front" id="pageRFront"></div>
-            <div class="page-face face-back" id="pageRBack" aria-hidden="true"></div>
-            <div class="flip-shadow" id="flipShadow" aria-hidden="true"></div>
-            <div class="flip-shine" id="flipShine" aria-hidden="true"></div>
+            <div class="page-face face-back" id="pageRBack"></div>
+            <div class="flip-shadow" id="flipShadow"></div>
+            <div class="flip-shine" id="flipShine"></div>
           </div>
         </div>
 
         <div class="cover cover-front" id="coverFront">
-          <img class="cover-img" id="coverFrontImg" src="assets/portada.webp" alt="Portada" loading="eager">
+          <img class="cover-img" id="coverFrontImg" src="assets/portada.webp" alt="Portada">
           <div class="cover-overlay">
-            <span class="cover-heart" aria-hidden="true">❤️</span>
+            <span class="cover-heart">❤️</span>
             <h2 class="cover-title" id="coverTitle"></h2>
             <p class="cover-subtitle" id="coverSubtitle"></p>
-            <div class="cover-frame" aria-hidden="true"></div>
+            <div class="cover-frame"></div>
           </div>
-          <p class="cover-hint" id="coverHint">Toca la portada para abrir el libro 💗</p>
+          <p class="cover-hint" id="coverHint"></p>
         </div>
 
         <div class="cover cover-back hidden" id="coverBack">
-          <img class="cover-img" id="coverBackImg" src="assets/contraportada.webp" alt="Contraportada" loading="lazy">
+          <img class="cover-img" id="coverBackImg" src="assets/contraportada.webp" alt="Contraportada">
           <div class="cover-overlay cover-overlay-back">
             <p class="cover-back-text" id="coverBackText"></p>
             <p class="cover-back-sub" id="coverBackSub"></p>
           </div>
         </div>
 
-      </div><!-- /book -->
+      </div>
 
-      <div class="book-ground-shadow" id="groundShadow" aria-hidden="true"></div>
+      <div class="book-shadow" id="bookShadow"></div>
 
-    </div><!-- /book-stage -->
+    </div>
 
-    <nav class="book-nav" id="bookNav" aria-label="Navegación del libro">
-      <button class="nav-btn" id="btnPrev" aria-label="Página anterior">‹</button>
+    <nav class="book-nav" id="bookNav">
+      <button class="nav-btn" id="btnPrev">‹</button>
       <div class="nav-mid">
-        <div class="nav-prog-track" aria-hidden="true">
+        <div class="nav-prog-track">
           <div class="nav-prog-fill" id="navFill"></div>
         </div>
-        <span class="nav-label" id="navLabel" aria-live="polite"></span>
+        <span class="nav-label" id="navLabel"></span>
       </div>
-      <button class="nav-btn" id="btnNext" aria-label="Página siguiente">›</button>
+      <button class="nav-btn" id="btnNext">›</button>
     </nav>
 
     <div class="book-aux" id="bookAux">
-      <button class="aux-btn" id="btnClose" aria-label="Cerrar libro">✕ Cerrar</button>
-      <button class="aux-btn" id="btnRestore" aria-label="Ir al inicio">↺ Inicio</button>
+      <button class="aux-btn" id="btnClose">✕ Cerrar</button>
+      <button class="aux-btn" id="btnRestore">↺ Inicio</button>
     </div>
 
-  </div><!-- /bookScreen -->
+  </div>
 
   <script src="config.js"></script>
   <script src="script.js"></script>
