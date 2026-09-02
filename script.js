@@ -348,7 +348,7 @@ function setBookState(state) {
   }
 }
 
-// ═══════════ DESTELLO DE LUZ (cinematic-ui 10/10) ═══════════
+// ═══════════ DESTELLO DE LUZ ═══════════
 function triggerFlash() {
   var flash = document.createElement('div');
   flash.className = 'book-flash';
@@ -358,12 +358,11 @@ function triggerFlash() {
   }, 1300);
 }
 
-// ═══════════ APERTURA Y CIERRE (10/10) ═══════════
+// ═══════════ APERTURA Y CIERRE ═══════════
 function abrirLibro() {
   if (S.bookOpen || S.flipping) return;
   var book = D.book;
 
-  // Destello de luz (cinematic-ui 10/10)
   triggerFlash();
 
   book.classList.add('opening');
@@ -372,7 +371,6 @@ function abrirLibro() {
     setBookState('open');
     S.vista = 0;
     renderVista(0);
-    // Stagger en páginas
     document.querySelectorAll('.page').forEach(function(p, i) {
       p.classList.add('page-enter');
       p.style.animationDelay = (i * 80) + 'ms';
@@ -419,7 +417,7 @@ function buildPageHTML(desc) {
   switch (desc.type) {
     case 'portada_interior': {
       var cfg = t.portadaInterior;
-      return '<div class="pg-wrap" style="padding:0;position:relative;overflow:hidden">' +
+      return '<div class="pg-wrap" style="padding:0;position:relative;overflow:hidden;cursor:pointer" onclick="abrirModalImagen(\'' + cfg.imagen + '\', \'' + cfg.textoDefault + '\')">' +
         '<img src="' + cfg.imagen + '" alt="Portada interior" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">' +
         '<div class="tapa-wrap" style="display:none;position:relative;z-index:1">' +
         '<div class="tapa-ornament">🌸</div>' +
@@ -430,7 +428,7 @@ function buildPageHTML(desc) {
     }
     case 'contraportada_interior': {
       var cfg2 = t.contraportadaInterior;
-      return '<div class="pg-wrap" style="padding:0;position:relative;overflow:hidden">' +
+      return '<div class="pg-wrap" style="padding:0;position:relative;overflow:hidden;cursor:pointer" onclick="abrirModalImagen(\'' + cfg2.imagen + '\', \'' + cfg2.textoDefault + '\')">' +
         '<img src="' + cfg2.imagen + '" alt="Contraportada interior" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">' +
         '<div class="tapa-wrap" style="display:none;position:relative;z-index:1">' +
         '<div class="tapa-ornament">💗</div>' +
@@ -454,7 +452,7 @@ function buildPageHTML(desc) {
       var pag = CONFIG.paginas[desc.idx];
       if (!pag) return '<div class="pg-wrap"></div>';
       return '<div class="pg-wrap">' +
-        '<div class="pg-img-box">' +
+        '<div class="pg-img-box" onclick="abrirModalImagen(\'' + pag.imagen + '\', \'' + (pag.frase || '') + '\')">' +
         '<img class="pg-img" src="' + pag.imagen + '" alt="Pagina ' + (desc.idx + 1) + '" loading="lazy" onerror="this.style.background=\'var(--r0)\';this.removeAttribute(\'src\')">' +
         '</div>' +
         '<p class="pg-frase">' + (pag.frase || '') + '</p>' +
@@ -472,7 +470,6 @@ function renderVista(vistaIdx) {
   D.pageRFront.innerHTML = buildPageHTML(v.right);
   preRenderNext(vistaIdx);
 
-  // Stagger en páginas
   var pages = document.querySelectorAll('.page');
   pages.forEach(function(p, i) {
     p.classList.remove('page-enter');
@@ -493,13 +490,13 @@ function preRenderNext(vistaIdx) {
   }
 }
 
-// ═══════════ RUBBER-BANDING FÍSICO (10/10) ═══════════
+// ═══════════ RUBBER-BANDING FÍSICO ═══════════
 function rubberband(overshoot, dimension, constant) {
   constant = constant || 0.55;
   return (overshoot * dimension * constant) / (dimension + constant * Math.abs(overshoot));
 }
 
-// ═══════════ VOLTEO CON CURVATURA 3D REAL (10/10) ═══════════
+// ═══════════ VOLTEO CON CURVATURA 3D REAL ═══════════
 function voltearAdelante() {
   if (S.flipping) return;
   if (S.vista >= VISTAS.length - 1) { cerrarLibro(); return; }
@@ -563,7 +560,7 @@ function voltearAtras() {
   updateNav();
 }
 
-// ═══════════ CURVATURA CON LUZ Y SOMBRA (10/10) ═══════════
+// ═══════════ CURVATURA CON LUZ Y SOMBRA ═══════════
 function animateCurvatura(dir) {
   var dur = CONFIG.tiempos.volteo || 600;
   var start = performance.now();
@@ -572,7 +569,6 @@ function animateCurvatura(dir) {
     var t = Math.min(1, (now - start) / dur);
     var curvature = Math.sin(t * Math.PI);
 
-    // Sombra más profunda
     D.flipShadow.style.opacity = (curvature * 0.8).toFixed(3);
     D.flipShadow.style.background =
       'linear-gradient(90deg, ' +
@@ -581,7 +577,6 @@ function animateCurvatura(dir) {
       'rgba(0,0,0,0.05) 40%, ' +
       'transparent 60%)';
 
-    // Brillo más intenso
     var shine = Math.sin(t * Math.PI * 1.2) * 0.7 + 0.3;
     D.flipShine.style.opacity = (shine * 0.7).toFixed(3);
     var pos = dir === 'fwd' ? 15 + t * 70 : 85 - t * 70;
@@ -597,7 +592,7 @@ function animateCurvatura(dir) {
   requestAnimationFrame(frame);
 }
 
-// ═══════════ SWIPE CON FÍSICA E INTERRUPCIÓN (10/10) ═══════════
+// ═══════════ SWIPE CON FÍSICA E INTERRUPCIÓN ═══════════
 function initSwipe() {
   var target = D.bookStage;
   target.addEventListener('pointerdown', onSwipeStart, { passive: true });
@@ -607,7 +602,6 @@ function initSwipe() {
 }
 
 function onSwipeStart(e) {
-  // INTERRUPCIÓN REAL: si está en vuelo, cancelar y seguir al dedo
   if (S.flipping) {
     S.flipping = false;
     var currentTransform = window.getComputedStyle(D.pageRInner).transform;
@@ -633,7 +627,6 @@ function onSwipeMove(e) {
   var maxDx = D.pageR.offsetWidth || 280;
   var ratio = Math.max(-1, Math.min(1, dx / maxDx));
 
-  // RUBBER-BANDING REAL
   var overshoot = 0;
   if (dx < 0 && S.vista >= VISTAS.length - 1) {
     overshoot = -rubberband(Math.abs(dx), maxDx, 0.5);
@@ -647,7 +640,6 @@ function onSwipeMove(e) {
   D.pageRInner.style.transition = 'none';
 
   if (dx < 0 && S.vista < VISTAS.length - 1) {
-    // Avanzar
     D.pageRInner.style.transform = 'perspective(1200px) rotateY(' + Math.max(-180, degrees) + 'deg)';
     D.pageRInner.style.clipPath = 'polygon(0 0, ' + (98 - Math.abs(ratio) * 30) + '% 0, ' + (95 - Math.abs(ratio) * 25) + '% 100%, 0 100%)';
     var prog = Math.min(1, Math.abs(ratio) * 2);
@@ -659,7 +651,6 @@ function onSwipeMove(e) {
     D.flipShine.style.opacity = (curve * 0.55).toFixed(3);
     S.swipePeaking = Math.abs(dx) > maxDx * 0.3;
   } else if (dx > 0 && S.vista > 0) {
-    // Retroceder
     var backDeg = Math.min(0, -180 + Math.min(180, Math.abs(degrees)));
     D.pageRInner.style.transform = 'perspective(1200px) rotateY(' + backDeg + 'deg)';
     D.pageRInner.style.clipPath = 'polygon(0 0, ' + (2 + Math.abs(ratio) * 30) + '% 0, ' + (5 + Math.abs(ratio) * 25) + '% 100%, 0 100%)';
@@ -771,6 +762,28 @@ function updateNav() {
   D.btnClose.style.opacity = S.bookOpen ? '1' : '0.35';
   D.btnClose.style.pointerEvents = S.bookOpen ? 'auto' : 'none';
 }
+
+// ═══════════ MODAL DE IMAGEN AMPLIADA ═══════════
+function abrirModalImagen(src, frase) {
+  var modal = document.getElementById('imageModal');
+  var img = document.getElementById('modalImage');
+  var fraseEl = document.getElementById('modalFrase');
+
+  img.src = src;
+  fraseEl.textContent = frase || '';
+  modal.classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function cerrarModalImagen() {
+  var modal = document.getElementById('imageModal');
+  modal.classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') cerrarModalImagen();
+});
 
 // ═══════════ REPRODUCTOR DE MÚSICA ═══════════
 function initPlayer() {
@@ -1008,4 +1021,5 @@ document.addEventListener('DOMContentLoaded', function() {
   console.log('✨ Libro Virtual 10/10 cargado');
   console.log('📖 Skills activas: emil-design-eng, apple-design, impeccable, taste-skill, cinematic-ui, motion-and-interaction, frontend-ui-ux, claude-design-skill');
   console.log('🎯 Curvatura 3D REAL, Destello de luz, Interrupción, Rubber-banding, Stagger, Sombras y brillos 10/10');
+  console.log('🖱️  Click en cada página para ampliar');
 });
