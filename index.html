@@ -179,6 +179,15 @@
 
   </div>
 
+  <!-- ── MODAL DE IMAGEN AMPLIADA ── -->
+  <div id="imageModal" class="image-modal hidden" onclick="cerrarModalImagen()">
+    <div class="image-modal-content" onclick="event.stopPropagation()">
+      <button class="image-modal-close" onclick="cerrarModalImagen()">✕</button>
+      <img id="modalImage" src="" alt="Imagen ampliada">
+      <p id="modalFrase" class="image-modal-frase"></p>
+    </div>
+  </div>
+
   <script src="config.js"></script>
   <script src="script.js"></script>
 </body>
