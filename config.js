@@ -11,7 +11,7 @@ const CONFIG = {
   tituloLibro: "Nuestra Historia",
   subtituloLibro: "May & Liam",
 
-  codigoAcceso: "140726",
+  codigoAcceso: "250826",
   msgCodigoCorrecto: "Perfecto... abriendo tu regalo",
   msgCodigoIncorrecto: "Intentalo de nuevo",
 
@@ -25,7 +25,7 @@ const CONFIG = {
     { clic: 25, mensaje: "Ya casi, ya casi" },
   ],
 
-  mensajeDentroCarta: "Este libro fue hecho con todo mi amor. Cada pagina guarda un pedacito de lo que somos.",
+  mensajeDentroCarta: "🌸💗este librito fue hesho con todito mi amolshito para ti mi bellíshima niñita bem peshoshita y perfecta de mi korashon HEHE:3💗🌸",
 
   tapas: {
     portada: { imagen: "assets/portada.webp" },
