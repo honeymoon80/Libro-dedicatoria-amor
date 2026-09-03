@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Libro Virtual</title>
+  <title>Carrusel de Amor</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;600;700&family=Great+Vibes&family=Playfair+Display:ital,wght@0,400;1,400&family=Cormorant+Garamond:ital,wght@0,300;1,400&display=swap" rel="stylesheet">
@@ -86,9 +86,10 @@
 
   </div>
 
-  <!-- ═══════════ FASE 2: LIBRO VIRTUAL ═══════════ -->
+  <!-- ═══════════ FASE 2: CARRUSEL DE AMOR ═══════════ -->
   <div id="bookScreen" class="book-screen hidden">
 
+    <!-- Reproductor de música -->
     <div class="player" id="player">
       <button class="player-toggle" id="playerToggle">🎵</button>
       <div class="player-body" id="playerBody">
@@ -116,76 +117,25 @@
     </div>
     <audio id="audio"></audio>
 
-    <div class="book-stage" id="bookStage">
-
-      <div class="book" id="book">
-
-        <div class="book-spine" id="spine"></div>
-
-        <div class="page page-L" id="pageL">
-          <div class="page-face face-front" id="pageLFront"></div>
-          <div class="page-face face-back" id="pageLBack"></div>
+    <!-- ── CARRUSEL ── -->
+    <div class="carousel-container">
+      <div class="carousel-wrapper">
+        <div class="carousel-track" id="carouselTrack">
+          <!-- Las imágenes se generan con JavaScript -->
         </div>
-
-        <div class="page page-R" id="pageR">
-          <div class="page-R-inner" id="pageRInner">
-            <div class="page-face face-front" id="pageRFront"></div>
-            <div class="page-face face-back" id="pageRBack"></div>
-            <div class="flip-shadow" id="flipShadow"></div>
-            <div class="flip-shine" id="flipShine"></div>
-          </div>
-        </div>
-
-        <div class="cover cover-front" id="coverFront">
-          <img class="cover-img" id="coverFrontImg" src="assets/portada.webp" alt="Portada">
-          <div class="cover-overlay">
-            <span class="cover-heart">❤️</span>
-            <h2 class="cover-title" id="coverTitle"></h2>
-            <p class="cover-subtitle" id="coverSubtitle"></p>
-            <div class="cover-frame"></div>
-          </div>
-          <p class="cover-hint" id="coverHint"></p>
-        </div>
-
-        <div class="cover cover-back hidden" id="coverBack">
-          <img class="cover-img" id="coverBackImg" src="assets/contraportada.webp" alt="Contraportada">
-          <div class="cover-overlay cover-overlay-back">
-            <p class="cover-back-text" id="coverBackText"></p>
-            <p class="cover-back-sub" id="coverBackSub"></p>
-          </div>
-        </div>
-
       </div>
 
-      <div class="book-shadow" id="bookShadow"></div>
+      <button class="carousel-btn prev-btn" id="carouselPrev">‹</button>
+      <button class="carousel-btn next-btn" id="carouselNext">›</button>
 
-    </div>
+      <div class="carousel-dots" id="carouselDots"></div>
 
-    <nav class="book-nav" id="bookNav">
-      <button class="nav-btn" id="btnPrev">‹</button>
-      <div class="nav-mid">
-        <div class="nav-prog-track">
-          <div class="nav-prog-fill" id="navFill"></div>
-        </div>
-        <span class="nav-label" id="navLabel"></span>
+      <div class="carousel-info">
+        <p class="carousel-frase" id="carouselFrase">💗</p>
+        <p class="carousel-progress" id="carouselProgress">1 / 8</p>
       </div>
-      <button class="nav-btn" id="btnNext">›</button>
-    </nav>
-
-    <div class="book-aux" id="bookAux">
-      <button class="aux-btn" id="btnClose">✕ Cerrar</button>
-      <button class="aux-btn" id="btnRestore">↺ Inicio</button>
     </div>
 
-  </div>
-
-  <!-- ── MODAL DE IMAGEN AMPLIADA ── -->
-  <div id="imageModal" class="image-modal hidden" onclick="cerrarModalImagen()">
-    <div class="image-modal-content" onclick="event.stopPropagation()">
-      <button class="image-modal-close" onclick="cerrarModalImagen()">✕</button>
-      <img id="modalImage" src="" alt="Imagen ampliada">
-      <p id="modalFrase" class="image-modal-frase"></p>
-    </div>
   </div>
 
   <script src="config.js"></script>
