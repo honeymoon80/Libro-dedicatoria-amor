@@ -1,7 +1,5 @@
 /* ============================================================
-   SCRIPT.JS — Libro Virtual Interactivo 10/10
-   Skills: emil-design-eng, apple-design, impeccable,
-   taste-skill, cinematic-ui, motion-and-interaction
+   SCRIPT.JS — Carrusel de Amor
    ============================================================ */
 'use strict';
 
@@ -10,22 +8,11 @@ const S = {
   digits: '',
   clics: 0,
   fase: 'code',
-  bookOpen: false,
-  showBack: false,
-  vista: 0,
-  flipping: false,
-  flipDir: 0,
-  swipeStartX: null,
-  swipeStartY: null,
-  swipeStartTime: null,
-  swipeDelta: 0,
-  swipePeaking: false,
   songIdx: 0,
   playing: false,
   playerOpen: false,
+  carouselIndex: 0,
 };
-
-let VISTAS = [];
 
 // ═══════════ DOM ═══════════
 const $ = id => document.getElementById(id);
@@ -60,34 +47,6 @@ function cacheDom() {
     btnSi: $('btnSi'),
     btnNo: $('btnNo'),
     bookScreen: $('bookScreen'),
-    bookStage: $('bookStage'),
-    book: $('book'),
-    spine: $('spine'),
-    bookShadow: $('bookShadow'),
-    pageL: $('pageL'),
-    pageLFront: $('pageLFront'),
-    pageLBack: $('pageLBack'),
-    pageR: $('pageR'),
-    pageRInner: $('pageRInner'),
-    pageRFront: $('pageRFront'),
-    pageRBack: $('pageRBack'),
-    flipShadow: $('flipShadow'),
-    flipShine: $('flipShine'),
-    coverFront: $('coverFront'),
-    coverFrontImg: $('coverFrontImg'),
-    coverTitle: $('coverTitle'),
-    coverSubtitle: $('coverSubtitle'),
-    coverHint: $('coverHint'),
-    coverBack: $('coverBack'),
-    coverBackImg: $('coverBackImg'),
-    coverBackText: $('coverBackText'),
-    coverBackSub: $('coverBackSub'),
-    btnPrev: $('btnPrev'),
-    btnNext: $('btnNext'),
-    navFill: $('navFill'),
-    navLabel: $('navLabel'),
-    btnClose: $('btnClose'),
-    btnRestore: $('btnRestore'),
     playerToggle: $('playerToggle'),
     playerBody: $('playerBody'),
     playerDisc: $('playerDisc'),
@@ -102,6 +61,12 @@ function cacheDom() {
     pcNext: $('pcNext'),
     playerVol: $('playerVol'),
     audio: $('audio'),
+    carouselTrack: $('carouselTrack'),
+    carouselDots: $('carouselDots'),
+    carouselFrase: $('carouselFrase'),
+    carouselProgress: $('carouselProgress'),
+    carouselPrev: $('carouselPrev'),
+    carouselNext: $('carouselNext'),
   };
 }
 
@@ -115,33 +80,7 @@ function applyConfig() {
   D.cartaOpenMsg.textContent = CONFIG.mensajeDentroCarta;
   D.btnSi.textContent = 'Si, quiero abrirla';
   D.btnNo.textContent = 'Espera un momento...';
-  D.coverTitle.textContent = CONFIG.tituloLibro;
-  D.coverSubtitle.textContent = CONFIG.subtituloLibro;
-  D.coverHint.textContent = 'Toca la portada para abrir el libro';
-  D.coverBackText.textContent = CONFIG.tapas.contraportada.texto;
-  D.coverBackSub.textContent = CONFIG.tapas.contraportada.subtexto;
-  document.title = CONFIG.tituloLibro + ' 💗';
-}
-
-// ═══════════ CONSTRUIR VISTAS ═══════════
-function buildVistas() {
-  var n = CONFIG.paginas.length;
-  var esPar = n % 2 === 0;
-  VISTAS = [];
-
-  VISTAS.push({ left: { type: 'portada_interior' }, right: { type: 'pagina', idx: 0 } });
-
-  if (esPar) {
-    for (var j = 1; j <= n - 2; j += 2) {
-      VISTAS.push({ left: { type: 'pagina', idx: j }, right: { type: 'pagina', idx: j + 1 } });
-    }
-    VISTAS.push({ left: { type: 'pagina', idx: n - 1 }, right: { type: 'contraportada_exterior' } });
-  } else {
-    for (var k = 1; k <= n - 2; k += 2) {
-      VISTAS.push({ left: { type: 'pagina', idx: k }, right: { type: 'pagina', idx: k + 1 } });
-    }
-    VISTAS.push({ left: { type: 'pagina', idx: n - 1 }, right: { type: 'contraportada_interior' } });
-  }
+  document.title = 'Carrusel de Amor 💗';
 }
 
 // ═══════════ FASE 1A — CÓDIGO DE ACCESO ═══════════
@@ -310,480 +249,90 @@ function handleBtnNo() {
   showToast('Cuando estes lista, aqui estare esperandote');
 }
 
-// ═══════════ FASE 2 — LIBRO VIRTUAL ═══════════
+// ═══════════ FASE 2 — CARRUSEL ═══════════
 function showBookScreen() {
   S.fase = 'book';
   D.bookScreen.classList.remove('hidden');
-  setBookState('closed-front');
-  updateNav();
-  initBookEvents();
+  initCarousel();
   startMusicOnInteract();
 }
 
-function setBookState(state) {
-  var book = D.book;
-  book.classList.remove('closed', 'open', 'closed-back', 'opening', 'closing');
+// ═══════════ CARRUSEL ═══════════
+function initCarousel() {
+  var imagenes = CONFIG.carrusel.imagenes;
+  var frases = CONFIG.carrusel.frases;
+  var total = imagenes.length;
 
-  if (state === 'closed-front') {
-    S.bookOpen = false;
-    S.showBack = false;
-    book.classList.add('closed');
-    D.coverFront.classList.remove('hidden');
-    D.coverBack.classList.add('hidden');
-    D.bookShadow.style.opacity = '0.5';
-  } else if (state === 'open') {
-    S.bookOpen = true;
-    S.showBack = false;
-    book.classList.add('open');
-    D.coverFront.classList.add('hidden');
-    D.coverBack.classList.add('hidden');
-    D.bookShadow.style.opacity = '0.65';
-  } else if (state === 'closed-back') {
-    S.bookOpen = false;
-    S.showBack = true;
-    book.classList.add('closed', 'closed-back');
-    D.coverFront.classList.add('hidden');
-    D.coverBack.classList.remove('hidden');
-    D.bookShadow.style.opacity = '0.5';
-  }
-}
-
-// ═══════════ DESTELLO DE LUZ ═══════════
-function triggerFlash() {
-  var flash = document.createElement('div');
-  flash.className = 'book-flash';
-  document.body.appendChild(flash);
-  setTimeout(function() {
-    flash.remove();
-  }, 1300);
-}
-
-// ═══════════ APERTURA Y CIERRE ═══════════
-function abrirLibro() {
-  if (S.bookOpen || S.flipping) return;
-  var book = D.book;
-
-  triggerFlash();
-
-  book.classList.add('opening');
-  book.addEventListener('animationend', function() {
-    book.classList.remove('opening');
-    setBookState('open');
-    S.vista = 0;
-    renderVista(0);
-    document.querySelectorAll('.page').forEach(function(p, i) {
-      p.classList.add('page-enter');
-      p.style.animationDelay = (i * 80) + 'ms';
-    });
-    updateNav();
-  }, { once: true });
-
-  launchConfetti(50);
-  spawnFx(window.innerWidth / 2, window.innerHeight / 2, 12);
-}
-
-function cerrarLibro() {
-  if (!S.bookOpen || S.flipping) return;
-  var book = D.book;
-  book.classList.add('closing');
-  book.addEventListener('animationend', function() {
-    book.classList.remove('closing');
-    setBookState('closed-back');
-    updateNav();
-    showToast('Libro cerrado');
-  }, { once: true });
-}
-
-function restaurarInicio() {
-  S.flipping = false;
-  S.vista = 0;
-  D.pageRInner.style.transition = 'none';
-  D.pageRInner.classList.remove('flip-fwd');
-  D.pageRInner.style.transform = '';
-  D.pageRInner.style.clipPath = '';
-  void D.pageRInner.offsetWidth;
-  D.pageRInner.style.transition = '';
-  D.flipShadow.style.opacity = '0';
-  D.flipShine.style.opacity = '0';
-  setBookState('closed-front');
-  updateNav();
-}
-
-// ═══════════ RENDERIZADO DE PÁGINAS ═══════════
-function buildPageHTML(desc) {
-  if (!desc) return '<div class="pg-wrap"></div>';
-  var t = CONFIG.tapas;
-
-  switch (desc.type) {
-    case 'portada_interior': {
-      var cfg = t.portadaInterior;
-      return '<div class="pg-wrap" style="padding:0;position:relative;overflow:hidden;cursor:pointer" onclick="abrirModalImagen(\'' + cfg.imagen + '\', \'' + cfg.textoDefault + '\')">' +
-        '<img src="' + cfg.imagen + '" alt="Portada interior" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">' +
-        '<div class="tapa-wrap" style="display:none;position:relative;z-index:1">' +
-        '<div class="tapa-ornament">🌸</div>' +
-        '<div class="tapa-overlay">' +
-        '<div class="tapa-text">' + cfg.textoDefault + '</div>' +
-        '<div class="tapa-sub">' + cfg.subDefault + '</div>' +
-        '</div></div></div>';
-    }
-    case 'contraportada_interior': {
-      var cfg2 = t.contraportadaInterior;
-      return '<div class="pg-wrap" style="padding:0;position:relative;overflow:hidden;cursor:pointer" onclick="abrirModalImagen(\'' + cfg2.imagen + '\', \'' + cfg2.textoDefault + '\')">' +
-        '<img src="' + cfg2.imagen + '" alt="Contraportada interior" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">' +
-        '<div class="tapa-wrap" style="display:none;position:relative;z-index:1">' +
-        '<div class="tapa-ornament">💗</div>' +
-        '<div class="tapa-overlay">' +
-        '<div class="tapa-text">' + cfg2.textoDefault + '</div>' +
-        '<div class="tapa-sub">' + cfg2.subDefault + '</div>' +
-        '</div></div></div>';
-    }
-    case 'contraportada_exterior': {
-      var cfg3 = t.contraportada;
-      return '<div class="pg-wrap" style="padding:0;position:relative;overflow:hidden">' +
-        '<img src="' + cfg3.imagen + '" alt="Contraportada" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">' +
-        '<div class="tapa-wrap" style="display:none;position:relative;z-index:1">' +
-        '<div class="tapa-ornament">💕</div>' +
-        '<div class="tapa-overlay">' +
-        '<div class="tapa-text">' + cfg3.texto + '</div>' +
-        '<div class="tapa-sub">' + cfg3.subtexto + '</div>' +
-        '</div></div></div>';
-    }
-    case 'pagina': {
-      var pag = CONFIG.paginas[desc.idx];
-      if (!pag) return '<div class="pg-wrap"></div>';
-      return '<div class="pg-wrap">' +
-        '<div class="pg-img-box" onclick="abrirModalImagen(\'' + pag.imagen + '\', \'' + (pag.frase || '') + '\')">' +
-        '<img class="pg-img" src="' + pag.imagen + '" alt="Pagina ' + (desc.idx + 1) + '" loading="lazy" onerror="this.style.background=\'var(--r0)\';this.removeAttribute(\'src\')">' +
-        '</div>' +
-        '<p class="pg-frase">' + (pag.frase || '') + '</p>' +
-        '</div>';
-    }
-    default:
-      return '<div class="pg-wrap"></div>';
-  }
-}
-
-function renderVista(vistaIdx) {
-  if (vistaIdx < 0 || vistaIdx >= VISTAS.length) return;
-  var v = VISTAS[vistaIdx];
-  D.pageLFront.innerHTML = buildPageHTML(v.left);
-  D.pageRFront.innerHTML = buildPageHTML(v.right);
-  preRenderNext(vistaIdx);
-
-  var pages = document.querySelectorAll('.page');
-  pages.forEach(function(p, i) {
-    p.classList.remove('page-enter');
-    void p.offsetWidth;
-    p.classList.add('page-enter');
-    p.style.animationDelay = (i * 80) + 'ms';
-  });
-}
-
-function preRenderNext(vistaIdx) {
-  var next = VISTAS[vistaIdx + 1];
-  if (next) {
-    D.pageRBack.innerHTML = buildPageHTML(next.right);
-    D.pageLBack.innerHTML = buildPageHTML(next.left);
-  } else {
-    D.pageRBack.innerHTML = '';
-    D.pageLBack.innerHTML = '';
-  }
-}
-
-// ═══════════ RUBBER-BANDING FÍSICO ═══════════
-function rubberband(overshoot, dimension, constant) {
-  constant = constant || 0.55;
-  return (overshoot * dimension * constant) / (dimension + constant * Math.abs(overshoot));
-}
-
-// ═══════════ VOLTEO CON CURVATURA 3D REAL ═══════════
-function voltearAdelante() {
-  if (S.flipping) return;
-  if (S.vista >= VISTAS.length - 1) { cerrarLibro(); return; }
-  S.flipping = true;
-  S.flipDir = 1;
-
-  preRenderNext(S.vista);
-  animateCurvatura('fwd');
-  D.pageRInner.classList.add('flip-fwd');
-
-  D.pageRInner.addEventListener('transitionend', function() {
-    S.vista++;
-    renderVista(S.vista);
-    D.pageRInner.style.transition = 'none';
-    D.pageRInner.classList.remove('flip-fwd');
-    D.pageRInner.style.transform = '';
-    D.pageRInner.style.clipPath = '';
-    void D.pageRInner.offsetWidth;
-    D.pageRInner.style.transition = '';
-    D.flipShadow.style.opacity = '0';
-    D.flipShine.style.opacity = '0';
-    S.flipping = false;
-    updateNav();
-  }, { once: true });
-
-  updateNav();
-}
-
-function voltearAtras() {
-  if (S.flipping) return;
-  if (S.vista <= 0) return;
-  S.flipping = true;
-  S.flipDir = -1;
-
-  var prev = VISTAS[S.vista - 1];
-  D.pageRBack.innerHTML = prev ? buildPageHTML(prev.right) : '';
-  D.pageLBack.innerHTML = prev ? buildPageHTML(prev.left) : '';
-
-  D.pageRInner.style.transition = 'none';
-  D.pageRInner.style.transform = 'perspective(1200px) rotateY(-180deg)';
-  D.pageRInner.style.clipPath = 'polygon(0 0, 98% 0, 95% 100%, 0 100%)';
-  void D.pageRInner.offsetWidth;
-  D.pageRInner.style.transition = '';
-
-  animateCurvatura('back');
-
-  D.pageRInner.addEventListener('transitionend', function() {
-    S.vista--;
-    renderVista(S.vista);
-    D.pageRInner.style.transition = 'none';
-    D.pageRInner.style.transform = '';
-    D.pageRInner.style.clipPath = '';
-    void D.pageRInner.offsetWidth;
-    D.pageRInner.style.transition = '';
-    D.flipShadow.style.opacity = '0';
-    D.flipShine.style.opacity = '0';
-    S.flipping = false;
-    updateNav();
-  }, { once: true });
-
-  updateNav();
-}
-
-// ═══════════ CURVATURA CON LUZ Y SOMBRA ═══════════
-function animateCurvatura(dir) {
-  var dur = CONFIG.tiempos.volteo || 600;
-  var start = performance.now();
-
-  function frame(now) {
-    var t = Math.min(1, (now - start) / dur);
-    var curvature = Math.sin(t * Math.PI);
-
-    D.flipShadow.style.opacity = (curvature * 0.8).toFixed(3);
-    D.flipShadow.style.background =
-      'linear-gradient(90deg, ' +
-      'rgba(0,0,0,0.35) 0%, ' +
-      'rgba(0,0,0,0.15) 20%, ' +
-      'rgba(0,0,0,0.05) 40%, ' +
-      'transparent 60%)';
-
-    var shine = Math.sin(t * Math.PI * 1.2) * 0.7 + 0.3;
-    D.flipShine.style.opacity = (shine * 0.7).toFixed(3);
-    var pos = dir === 'fwd' ? 15 + t * 70 : 85 - t * 70;
-    D.flipShine.style.background =
-      'linear-gradient(90deg, ' +
-      'transparent ' + (pos - 20) + '%, ' +
-      'rgba(255,255,255,0.5) ' + pos + '%, ' +
-      'rgba(255,255,255,0.15) ' + (pos + 15) + '%, ' +
-      'transparent ' + (pos + 35) + '%)';
-
-    if (t < 1 && S.flipping) requestAnimationFrame(frame);
-  }
-  requestAnimationFrame(frame);
-}
-
-// ═══════════ SWIPE CON FÍSICA E INTERRUPCIÓN ═══════════
-function initSwipe() {
-  var target = D.bookStage;
-  target.addEventListener('pointerdown', onSwipeStart, { passive: true });
-  target.addEventListener('pointermove', onSwipeMove, { passive: true });
-  target.addEventListener('pointerup', onSwipeEnd, { passive: true });
-  target.addEventListener('pointercancel', resetSwipe, { passive: true });
-}
-
-function onSwipeStart(e) {
-  if (S.flipping) {
-    S.flipping = false;
-    var currentTransform = window.getComputedStyle(D.pageRInner).transform;
-    D.pageRInner.style.transition = 'none';
-  }
-  S.swipeStartX = e.clientX;
-  S.swipeStartY = e.clientY;
-  S.swipeStartTime = performance.now();
-  S.swipeDelta = 0;
-  S.swipePeaking = false;
-}
-
-function onSwipeMove(e) {
-  if (S.swipeStartX === null) return;
-
-  var dx = e.clientX - S.swipeStartX;
-  var dy = e.clientY - S.swipeStartY;
-
-  if (Math.abs(dy) > Math.abs(dx) * 1.4) { resetSwipe(); return; }
-
-  S.swipeDelta = dx;
-
-  var maxDx = D.pageR.offsetWidth || 280;
-  var ratio = Math.max(-1, Math.min(1, dx / maxDx));
-
-  var overshoot = 0;
-  if (dx < 0 && S.vista >= VISTAS.length - 1) {
-    overshoot = -rubberband(Math.abs(dx), maxDx, 0.5);
-  } else if (dx > 0 && S.vista <= 0) {
-    overshoot = rubberband(Math.abs(dx), maxDx, 0.5);
-  }
-
-  var effectiveDx = dx + overshoot;
-  var degrees = (effectiveDx / maxDx) * 180;
-
-  D.pageRInner.style.transition = 'none';
-
-  if (dx < 0 && S.vista < VISTAS.length - 1) {
-    D.pageRInner.style.transform = 'perspective(1200px) rotateY(' + Math.max(-180, degrees) + 'deg)';
-    D.pageRInner.style.clipPath = 'polygon(0 0, ' + (98 - Math.abs(ratio) * 30) + '% 0, ' + (95 - Math.abs(ratio) * 25) + '% 100%, 0 100%)';
-    var prog = Math.min(1, Math.abs(ratio) * 2);
-    var curve = Math.sin(prog * Math.PI);
-    D.flipShadow.style.opacity = (curve * 0.7).toFixed(3);
-    D.flipShine.style.opacity = (curve * 0.6).toFixed(3);
-    var pos = 30 + prog * 40;
-    D.flipShine.style.left = pos + '%';
-    D.flipShine.style.opacity = (curve * 0.55).toFixed(3);
-    S.swipePeaking = Math.abs(dx) > maxDx * 0.3;
-  } else if (dx > 0 && S.vista > 0) {
-    var backDeg = Math.min(0, -180 + Math.min(180, Math.abs(degrees)));
-    D.pageRInner.style.transform = 'perspective(1200px) rotateY(' + backDeg + 'deg)';
-    D.pageRInner.style.clipPath = 'polygon(0 0, ' + (2 + Math.abs(ratio) * 30) + '% 0, ' + (5 + Math.abs(ratio) * 25) + '% 100%, 0 100%)';
-    var prog2 = Math.min(1, Math.abs(ratio) * 2);
-    var curve2 = Math.sin(prog2 * Math.PI);
-    D.flipShadow.style.opacity = (curve2 * 0.6).toFixed(3);
-    D.flipShine.style.opacity = (curve2 * 0.5).toFixed(3);
-    var pos2 = 70 - prog2 * 40;
-    D.flipShine.style.left = pos2 + '%';
-    D.flipShine.style.opacity = (curve2 * 0.5).toFixed(3);
-  }
-}
-
-function onSwipeEnd(e) {
-  if (S.swipeStartX === null) return;
-
-  var dx = e.clientX - S.swipeStartX;
-  var dt = performance.now() - S.swipeStartTime;
-  var vel = dt > 0 ? Math.abs(dx) / dt : 0;
-
-  var maxDx = D.pageR.offsetWidth || 280;
-  var threshold = maxDx * 0.28;
-  var velThresh = 0.28;
-
-  D.pageRInner.style.transition = '';
-
-  if (!S.flipping) {
-    if (dx < -threshold || (dx < -30 && vel > velThresh)) {
-      voltearAdelante();
-    } else if (dx > threshold || (dx > 30 && vel > velThresh)) {
-      voltearAtras();
-    } else {
-      snapBack();
-    }
-  }
-
-  resetSwipe();
-}
-
-function resetSwipe() {
-  S.swipeStartX = null;
-  S.swipeStartY = null;
-  S.swipeDelta = 0;
-  S.swipePeaking = false;
-}
-
-function snapBack() {
-  D.pageRInner.style.transition = 'transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1), clip-path 260ms cubic-bezier(0.34, 1.56, 0.64, 1)';
-  D.pageRInner.style.transform = 'rotateY(0deg)';
-  D.pageRInner.style.clipPath = 'polygon(0 0, 100% 0, 100% 100%, 0 100%)';
-  D.flipShadow.style.opacity = '0';
-  D.flipShine.style.opacity = '0';
-  D.pageRInner.addEventListener('transitionend', function() {
-    D.pageRInner.style.transition = '';
-    D.pageRInner.style.transform = '';
-    D.pageRInner.style.clipPath = '';
-  }, { once: true });
-}
-
-// ═══════════ BOTONES DE NAVEGACIÓN ═══════════
-function initBookEvents() {
-  D.coverFront.addEventListener('click', function() {
-    if (!S.bookOpen) abrirLibro();
+  // Construir slides
+  D.carouselTrack.innerHTML = '';
+  imagenes.forEach(function(img, i) {
+    var slide = document.createElement('div');
+    slide.className = 'carousel-slide';
+    slide.innerHTML = '<img src="' + img + '" alt="Imagen ' + (i + 1) + '" loading="lazy" onerror="this.style.background=\'#fce4ec\';this.removeAttribute(\'src\')">';
+    D.carouselTrack.appendChild(slide);
   });
 
-  D.btnNext.addEventListener('click', function() {
-    if (!S.bookOpen) { abrirLibro(); return; }
-    voltearAdelante();
-  });
+  // Construir dots
+  D.carouselDots.innerHTML = '';
+  for (var i = 0; i < total; i++) {
+    var dot = document.createElement('div');
+    dot.className = 'carousel-dot' + (i === 0 ? ' active' : '');
+    dot.addEventListener('click', (function(index) {
+      return function() { goToSlide(index); };
+    })(i));
+    D.carouselDots.appendChild(dot);
+  }
 
-  D.btnPrev.addEventListener('click', function() {
-    if (!S.bookOpen) return;
-    if (S.vista === 0) { cerrarLibro(); return; }
-    voltearAtras();
-  });
+  // Actualizar info
+  S.carouselIndex = 0;
+  updateCarousel();
 
-  D.btnClose.addEventListener('click', function() {
-    if (S.bookOpen) cerrarLibro();
-  });
+  // Botones
+  D.carouselPrev.addEventListener('click', function() { goToSlide(S.carouselIndex - 1); });
+  D.carouselNext.addEventListener('click', function() { goToSlide(S.carouselIndex + 1); });
 
-  D.btnRestore.addEventListener('click', restaurarInicio);
+  // Swipe táctil
+  var startX = 0;
+  var wrapper = document.querySelector('.carousel-wrapper');
+  wrapper.addEventListener('touchstart', function(e) {
+    startX = e.touches[0].clientX;
+  }, { passive: true });
+  wrapper.addEventListener('touchend', function(e) {
+    var diff = startX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 40) {
+      diff > 0 ? goToSlide(S.carouselIndex + 1) : goToSlide(S.carouselIndex - 1);
+    }
+  }, { passive: true });
 
-  initSwipe();
-
+  // Teclado
   document.addEventListener('keydown', function(e) {
-    if (S.fase !== 'book') return;
-    if (e.key === 'ArrowRight') D.btnNext.click();
-    if (e.key === 'ArrowLeft') D.btnPrev.click();
+    if (D.bookScreen.classList.contains('hidden')) return;
+    if (e.key === 'ArrowRight') goToSlide(S.carouselIndex + 1);
+    if (e.key === 'ArrowLeft') goToSlide(S.carouselIndex - 1);
   });
 }
 
-// ═══════════ NAVEGACIÓN — UI ═══════════
-function updateNav() {
-  var total = VISTAS.length;
-  var actual = S.vista + 1;
-
-  if (!S.bookOpen) {
-    D.navLabel.textContent = S.showBack ? 'Contraportada' : 'Portada';
-  } else {
-    D.navLabel.textContent = 'Vista ' + actual + ' de ' + total;
-  }
-
-  var pct = S.bookOpen ? (actual / total) * 100 : (S.showBack ? 100 : 0);
-  D.navFill.style.width = pct + '%';
-
-  D.btnPrev.disabled = S.flipping || (!S.bookOpen);
-  D.btnNext.disabled = S.flipping;
-
-  D.btnClose.style.opacity = S.bookOpen ? '1' : '0.35';
-  D.btnClose.style.pointerEvents = S.bookOpen ? 'auto' : 'none';
+function goToSlide(index) {
+  var total = CONFIG.carrusel.imagenes.length;
+  if (index < 0) index = total - 1;
+  if (index >= total) index = 0;
+  S.carouselIndex = index;
+  updateCarousel();
 }
 
-// ═══════════ MODAL DE IMAGEN AMPLIADA ═══════════
-function abrirModalImagen(src, frase) {
-  var modal = document.getElementById('imageModal');
-  var img = document.getElementById('modalImage');
-  var fraseEl = document.getElementById('modalFrase');
+function updateCarousel() {
+  var total = CONFIG.carrusel.imagenes.length;
+  var frases = CONFIG.carrusel.frases;
 
-  img.src = src;
-  fraseEl.textContent = frase || '';
-  modal.classList.add('active');
-  document.body.style.overflow = 'hidden';
+  D.carouselTrack.style.transform = 'translateX(-' + (S.carouselIndex * 100) + '%)';
+  D.carouselFrase.textContent = frases[S.carouselIndex] || '💗';
+  D.carouselProgress.textContent = (S.carouselIndex + 1) + ' / ' + total;
+
+  var dots = D.carouselDots.querySelectorAll('.carousel-dot');
+  dots.forEach(function(dot, i) {
+    dot.classList.toggle('active', i === S.carouselIndex);
+  });
 }
-
-function cerrarModalImagen() {
-  var modal = document.getElementById('imageModal');
-  modal.classList.remove('active');
-  document.body.style.overflow = '';
-}
-
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') cerrarModalImagen();
-});
 
 // ═══════════ REPRODUCTOR DE MÚSICA ═══════════
 function initPlayer() {
@@ -1012,14 +561,9 @@ function showToast(msg) {
 document.addEventListener('DOMContentLoaded', function() {
   cacheDom();
   applyConfig();
-  buildVistas();
   initEntryCode();
   initFxCanvas();
   startHearts();
   initPlayer();
-  initBookEvents();
-  console.log('✨ Libro Virtual 10/10 cargado');
-  console.log('📖 Skills activas: emil-design-eng, apple-design, impeccable, taste-skill, cinematic-ui, motion-and-interaction, frontend-ui-ux, claude-design-skill');
-  console.log('🎯 Curvatura 3D REAL, Destello de luz, Interrupción, Rubber-banding, Stagger, Sombras y brillos 10/10');
-  console.log('🖱️  Click en cada página para ampliar');
+  console.log('✨ Carrusel de Amor cargado');
 });
