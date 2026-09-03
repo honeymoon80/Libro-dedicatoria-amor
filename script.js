@@ -253,34 +253,49 @@ function handleBtnNo() {
 function showBookScreen() {
   S.fase = 'book';
   D.bookScreen.classList.remove('hidden');
-  initCarousel();
+  // Inicializar carrusel y m�sica SOLO si es necesario
+  if (D.carouselTrack && D.carouselTrack.children.length === 0) {
+    initCarousel();
+  }
+  // Iniciar música
   startMusicOnInteract();
 }
 
 // ═══════════ CARRUSEL ═══════════
 function initCarousel() {
+  // Verificar que exista CONFIG.carrusel
+  if (!CONFIG.carrusel || !CONFIG.carrusel.imagenes || CONFIG.carrusel.imagenes.length === 0) {
+    console.error('No hay imágenes configuradas para el carrusel');
+    return;
+  }
+
   var imagenes = CONFIG.carrusel.imagenes;
-  var frases = CONFIG.carrusel.frases;
+  var frases = CONFIG.carrusel.frases || [];
   var total = imagenes.length;
 
-  // Construir slides
-  D.carouselTrack.innerHTML = '';
-  imagenes.forEach(function(img, i) {
-    var slide = document.createElement('div');
-    slide.className = 'carousel-slide';
-    slide.innerHTML = '<img src="' + img + '" alt="Imagen ' + (i + 1) + '" loading="lazy" onerror="this.style.background=\'#fce4ec\';this.removeAttribute(\'src\')">';
-    D.carouselTrack.appendChild(slide);
-  });
+  // Limpiar track
+  if (D.carouselTrack) {
+    D.carouselTrack.innerHTML = '';
+    imagenes.forEach(function(img, i) {
+      var slide = document.createElement('div');
+      slide.className = 'carousel-slide';
+      var frase = frases[i] || '💗';
+      slide.innerHTML = '<img src="' + img + '" alt="Imagen ' + (i + 1) + '" loading="lazy" onerror="this.style.background=\'#fce4ec\';this.removeAttribute(\'src\')">';
+      D.carouselTrack.appendChild(slide);
+    });
+  }
 
   // Construir dots
-  D.carouselDots.innerHTML = '';
-  for (var i = 0; i < total; i++) {
-    var dot = document.createElement('div');
-    dot.className = 'carousel-dot' + (i === 0 ? ' active' : '');
-    dot.addEventListener('click', (function(index) {
-      return function() { goToSlide(index); };
-    })(i));
-    D.carouselDots.appendChild(dot);
+  if (D.carouselDots) {
+    D.carouselDots.innerHTML = '';
+    for (var i = 0; i < total; i++) {
+      var dot = document.createElement('div');
+      dot.className = 'carousel-dot' + (i === 0 ? ' active' : '');
+      dot.addEventListener('click', (function(index) {
+        return function() { goToSlide(index); };
+      })(i));
+      D.carouselDots.appendChild(dot);
+    }
   }
 
   // Actualizar info
@@ -288,21 +303,27 @@ function initCarousel() {
   updateCarousel();
 
   // Botones
-  D.carouselPrev.addEventListener('click', function() { goToSlide(S.carouselIndex - 1); });
-  D.carouselNext.addEventListener('click', function() { goToSlide(S.carouselIndex + 1); });
+  if (D.carouselPrev) {
+    D.carouselPrev.addEventListener('click', function() { goToSlide(S.carouselIndex - 1); });
+  }
+  if (D.carouselNext) {
+    D.carouselNext.addEventListener('click', function() { goToSlide(S.carouselIndex + 1); });
+  }
 
   // Swipe táctil
   var startX = 0;
   var wrapper = document.querySelector('.carousel-wrapper');
-  wrapper.addEventListener('touchstart', function(e) {
-    startX = e.touches[0].clientX;
-  }, { passive: true });
-  wrapper.addEventListener('touchend', function(e) {
-    var diff = startX - e.changedTouches[0].clientX;
-    if (Math.abs(diff) > 40) {
-      diff > 0 ? goToSlide(S.carouselIndex + 1) : goToSlide(S.carouselIndex - 1);
-    }
-  }, { passive: true });
+  if (wrapper) {
+    wrapper.addEventListener('touchstart', function(e) {
+      startX = e.touches[0].clientX;
+    }, { passive: true });
+    wrapper.addEventListener('touchend', function(e) {
+      var diff = startX - e.changedTouches[0].clientX;
+      if (Math.abs(diff) > 40) {
+        diff > 0 ? goToSlide(S.carouselIndex + 1) : goToSlide(S.carouselIndex - 1);
+      }
+    }, { passive: true });
+  }
 
   // Teclado
   document.addEventListener('keydown', function(e) {
@@ -322,16 +343,24 @@ function goToSlide(index) {
 
 function updateCarousel() {
   var total = CONFIG.carrusel.imagenes.length;
-  var frases = CONFIG.carrusel.frases;
+  var frases = CONFIG.carrusel.frases || [];
 
-  D.carouselTrack.style.transform = 'translateX(-' + (S.carouselIndex * 100) + '%)';
-  D.carouselFrase.textContent = frases[S.carouselIndex] || '💗';
-  D.carouselProgress.textContent = (S.carouselIndex + 1) + ' / ' + total;
+  if (D.carouselTrack) {
+    D.carouselTrack.style.transform = 'translateX(-' + (S.carouselIndex * 100) + '%)';
+  }
+  if (D.carouselFrase) {
+    D.carouselFrase.textContent = frases[S.carouselIndex] || '💗';
+  }
+  if (D.carouselProgress) {
+    D.carouselProgress.textContent = (S.carouselIndex + 1) + ' / ' + total;
+  }
 
-  var dots = D.carouselDots.querySelectorAll('.carousel-dot');
-  dots.forEach(function(dot, i) {
-    dot.classList.toggle('active', i === S.carouselIndex);
-  });
+  if (D.carouselDots) {
+    var dots = D.carouselDots.querySelectorAll('.carousel-dot');
+    dots.forEach(function(dot, i) {
+      dot.classList.toggle('active', i === S.carouselIndex);
+    });
+  }
 }
 
 // ═══════════ REPRODUCTOR DE MÚSICA ═══════════
